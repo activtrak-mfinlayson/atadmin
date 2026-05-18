@@ -1,0 +1,27 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - errcheck
+    - gocritic
+    - staticcheck
+    - revive
+    - nolintlint
+    - exhaustive
+
+  settings:
+    revive:
+      rules:
+        - name: exported
+          severity: warning
+          disabled: false
+    exhaustive:
+      default-signifies-exhaustive: true
+
+formatters:
+  exclusions:
+    paths:
+      - cmd/atadmin/main.go

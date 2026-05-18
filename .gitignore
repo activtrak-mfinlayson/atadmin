@@ -1,0 +1,11 @@
+bin/
+*.out
+coverage.out
+*.test
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
+vendor/
