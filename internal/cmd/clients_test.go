@@ -134,8 +134,8 @@ func TestClientsListJSONIsParseable(t *testing.T) {
 	if len(decoded) != 1 {
 		t.Errorf("expected 1 JSON element, got %d", len(decoded))
 	}
-	if decoded[0]["username"] != "carol" {
-		t.Errorf("expected username=carol in JSON, got %v", decoded[0]["username"])
+	if decoded[0]["name"] != "carol" {
+		t.Errorf("expected name=carol in JSON, got %v", decoded[0]["name"])
 	}
 }
 

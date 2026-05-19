@@ -62,9 +62,9 @@ func newClientsListCmd(state *appState) *cobra.Command {
 
 			rows := make([][]string, len(clients))
 			for i, c := range clients {
-				rows[i] = []string{c.Username, c.Alias, c.Status}
+				rows[i] = []string{strconv.Itoa(c.ID), c.Username, c.Alias, c.Status}
 			}
-			output.Table(cmd.OutOrStdout(), []string{"USERNAME", "ALIAS", "STATUS"}, rows)
+			output.Table(cmd.OutOrStdout(), []string{"ID", "USERNAME", "ALIAS", "STATUS"}, rows)
 			return nil
 		},
 	}

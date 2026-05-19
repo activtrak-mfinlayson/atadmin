@@ -9,8 +9,8 @@ type ErrorResponse struct {
 // ATClient represents a tracked user (client) in the ActivTrak system.
 type ATClient struct {
 	ID          int    `json:"id"`
-	Username    string `json:"username"`
-	LogonDomain string `json:"logonDomain"`
+	Username    string `json:"name"`
+	LogonDomain string `json:"domain"`
 	Alias       string `json:"alias"`
 	Status      string `json:"status"`
 	DeviceCount int    `json:"deviceCount"`
