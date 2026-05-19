@@ -125,9 +125,10 @@ func TestCreateGroup(t *testing.T) {
 					t.Errorf("path = %s, want %s", r.URL.Path, wantPath)
 				}
 
+				// API returns bare integer (not an object).
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusCreated)
-				if err := json.NewEncoder(w).Encode(map[string]int{"id": tc.wantID}); err != nil {
+				if err := json.NewEncoder(w).Encode(tc.wantID); err != nil {
 					t.Errorf("encoding response: %v", err)
 				}
 			}))

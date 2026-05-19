@@ -144,13 +144,11 @@ func (c *Client) CreateGroup(ctx context.Context, name string) (int, error) {
 		return 0, err
 	}
 
-	var result struct {
-		ID int `json:"id"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	var id int
+	if err := json.NewDecoder(resp.Body).Decode(&id); err != nil {
 		return 0, fmt.Errorf("decoding create group response: %w", err)
 	}
-	return result.ID, nil
+	return id, nil
 }
 
 // RenameGroup renames the group identified by id.
@@ -171,8 +169,8 @@ func (c *Client) RenameGroup(ctx context.Context, id int, name string) error {
 // DeleteGroups deletes groups by their IDs.
 func (c *Client) DeleteGroups(ctx context.Context, ids []int) error {
 	body := struct {
-		GroupIDs []int `json:"groupIds"`
-	}{GroupIDs: ids}
+		ParentIDs []int `json:"parentIds"`
+	}{ParentIDs: ids}
 
 	resp, err := c.doRequest(ctx, http.MethodDelete, "/admin/v1/groups", body)
 	if err != nil {

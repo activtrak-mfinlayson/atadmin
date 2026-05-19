@@ -65,13 +65,11 @@ func (c *Client) CreateSchedule(ctx context.Context, body map[string]any) (strin
 	if err := checkResponse(resp); err != nil {
 		return "", err
 	}
-	var result struct {
-		ID string `json:"id"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	var id string
+	if err := json.NewDecoder(resp.Body).Decode(&id); err != nil {
 		return "", fmt.Errorf("decoding create schedule response: %w", err)
 	}
-	return result.ID, nil
+	return id, nil
 }
 
 // DeleteSchedule removes the schedule with the given UUID.

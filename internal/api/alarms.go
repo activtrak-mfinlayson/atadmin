@@ -84,11 +84,14 @@ func (c *Client) GetAlarmDetails(ctx context.Context, id int) (map[string]any, e
 	if err := checkResponse(resp); err != nil {
 		return nil, err
 	}
-	var result map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	var raw []map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
 		return nil, fmt.Errorf("decoding alarm details response: %w", err)
 	}
-	return result, nil
+	if len(raw) == 0 {
+		return nil, fmt.Errorf("not found: the requested resource does not exist")
+	}
+	return raw[0], nil
 }
 
 // SaveAlarms creates one or more alarms in bulk.
