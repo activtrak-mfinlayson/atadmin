@@ -53,8 +53,17 @@ func TestListGroups(t *testing.T) {
 				gotPage = r.URL.Query().Get("Page")
 				gotPageSize = r.URL.Query().Get("PageSize")
 
+			// Serve actual wire format: groupid/groupname field names.
+				type wireGroup struct {
+					ID   int    `json:"groupid"`
+					Name string `json:"groupname"`
+				}
+				wire := make([]wireGroup, len(tc.fixture))
+				for i, g := range tc.fixture {
+					wire[i] = wireGroup{ID: g.ID, Name: g.Name}
+				}
 				w.Header().Set("Content-Type", "application/json")
-				if err := json.NewEncoder(w).Encode(tc.fixture); err != nil {
+				if err := json.NewEncoder(w).Encode(wire); err != nil {
 					t.Errorf("encoding fixture: %v", err)
 				}
 			}))
@@ -231,8 +240,32 @@ func TestListGroupMembers(t *testing.T) {
 					t.Errorf("path = %s, want %s", r.URL.Path, wantPath)
 				}
 
+			// Serve actual wire format: {groupId, clients:[...], devices:[...]} (single object).
+				type wireMember struct {
+					MemberID int `json:"memberId"`
+				}
+				type wireGroup struct {
+					GroupID int          `json:"groupId"`
+					Clients []wireMember `json:"clients"`
+					Devices []wireMember `json:"devices"`
+				}
+				var clients, devices []wireMember
+				for _, m := range tc.fixture {
+					wm := wireMember{MemberID: m.MemberID}
+					if m.MemberType == "device" {
+						devices = append(devices, wm)
+					} else {
+						clients = append(clients, wm)
+					}
+				}
+				if clients == nil {
+					clients = []wireMember{}
+				}
+				if devices == nil {
+					devices = []wireMember{}
+				}
 				w.Header().Set("Content-Type", "application/json")
-				if err := json.NewEncoder(w).Encode(tc.fixture); err != nil {
+				if err := json.NewEncoder(w).Encode(wireGroup{GroupID: tc.groupID, Clients: clients, Devices: devices}); err != nil {
 					t.Errorf("encoding fixture: %v", err)
 				}
 			}))

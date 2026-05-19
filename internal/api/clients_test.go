@@ -216,8 +216,9 @@ func TestListDoNotTrack(t *testing.T) {
 		if r.URL.Path != "/admin/v1/clients/donottrack" {
 			t.Errorf("path = %s, want /admin/v1/clients/donottrack", r.URL.Path)
 		}
+		// Serve actual wire format: {"records": [...]} with logondomain/globaluser fields.
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(fixture); err != nil {
+		if err := json.NewEncoder(w).Encode(map[string]any{"records": fixture}); err != nil {
 			t.Errorf("encoding fixture: %v", err)
 		}
 	}))

@@ -56,11 +56,32 @@ func (c *Client) ListAuditLogs(
 		return nil, err
 	}
 
-	var logs []AuditLog
-	if err := json.NewDecoder(resp.Body).Decode(&logs); err != nil {
+	// API returns {"totalCount": N, "data": [...]} with different field names.
+	var envelope struct {
+		Data []struct {
+			ID          int    `json:"auditid"`
+			Action      string `json:"eventname"`
+			Actor       string `json:"user"`
+			Timestamp   string `json:"time"`
+			Details     string `json:"description"`
+			AttachmentID string `json:"guid"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
 		return nil, fmt.Errorf("decoding audit log response: %w", err)
 	}
-	return logs, nil
+	out := make([]AuditLog, len(envelope.Data))
+	for i, r := range envelope.Data {
+		out[i] = AuditLog{
+			ID:           r.ID,
+			Action:       r.Action,
+			Actor:        r.Actor,
+			Timestamp:    r.Timestamp,
+			Details:      r.Details,
+			AttachmentID: r.AttachmentID,
+		}
+	}
+	return out, nil
 }
 
 // GetAttachment retrieves the raw bytes of an audit log attachment by its ID.

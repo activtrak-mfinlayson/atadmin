@@ -52,8 +52,19 @@ func TestListAlarms(t *testing.T) {
 				}
 				gotPage = r.URL.Query().Get("page")
 				gotPageSize = r.URL.Query().Get("pageSize")
+				// Serve the actual wire format: alarmid + active field names.
+				type wireAlarm struct {
+					ID      int    `json:"alarmid"`
+					Name    string `json:"name"`
+					Type    string `json:"type"`
+					Enabled bool   `json:"active"`
+				}
+				wire := make([]wireAlarm, len(tc.fixture))
+				for i, a := range tc.fixture {
+					wire[i] = wireAlarm{ID: a.ID, Name: a.Name, Type: a.Type, Enabled: a.Enabled}
+				}
 				w.Header().Set("Content-Type", "application/json")
-				if err := json.NewEncoder(w).Encode(tc.fixture); err != nil {
+				if err := json.NewEncoder(w).Encode(wire); err != nil {
 					t.Errorf("encoding fixture: %v", err)
 				}
 			}))
@@ -124,8 +135,16 @@ func TestGetAlarm(t *testing.T) {
 				if r.URL.Path != wantPath {
 					t.Errorf("path = %s, want %s", r.URL.Path, wantPath)
 				}
+				// API returns an array even for single-item GET; use alarmid/active field names.
+				type wireAlarm struct {
+					ID      int    `json:"alarmid"`
+					Name    string `json:"name"`
+					Type    string `json:"type"`
+					Enabled bool   `json:"active"`
+				}
+				arr := []wireAlarm{{ID: tc.fixture.ID, Name: tc.fixture.Name, Type: tc.fixture.Type, Enabled: tc.fixture.Enabled}}
 				w.Header().Set("Content-Type", "application/json")
-				if err := json.NewEncoder(w).Encode(tc.fixture); err != nil {
+				if err := json.NewEncoder(w).Encode(arr); err != nil {
 					t.Errorf("encoding fixture: %v", err)
 				}
 			}))

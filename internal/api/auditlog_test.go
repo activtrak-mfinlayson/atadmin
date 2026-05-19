@@ -33,8 +33,19 @@ func TestListAuditLogs_WithParams(t *testing.T) {
 		gotFrom = r.URL.Query().Get("FromDate")
 		gotPage = r.URL.Query().Get("Page")
 
+		// Serve actual wire format: {"data": [{auditid, eventname, user, time, ...}]}
+		type wireItem struct {
+			ID     int    `json:"auditid"`
+			Action string `json:"eventname"`
+			Actor  string `json:"user"`
+			Time   string `json:"time"`
+		}
+		items := make([]wireItem, len(fixture))
+		for i, e := range fixture {
+			items[i] = wireItem{ID: e.ID, Action: e.Action, Actor: e.Actor, Time: e.Timestamp}
+		}
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(fixture); err != nil {
+		if err := json.NewEncoder(w).Encode(map[string]any{"totalCount": len(items), "data": items}); err != nil {
 			t.Errorf("encoding fixture: %v", err)
 		}
 	}))
@@ -82,7 +93,7 @@ func TestListAuditLogs_EmptyParams(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedQuery = r.URL.RawQuery
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte("[]"))
+		_, _ = w.Write([]byte(`{"totalCount":0,"data":[]}`))
 	}))
 	defer server.Close()
 
@@ -114,7 +125,7 @@ func TestListAuditLogs_PageSetNotFrom(t *testing.T) {
 		gotFrom = r.URL.Query().Get("FromDate")
 		gotPage = r.URL.Query().Get("Page")
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte("[]"))
+		_, _ = w.Write([]byte(`{"totalCount":0,"data":[]}`))
 	}))
 	defer server.Close()
 

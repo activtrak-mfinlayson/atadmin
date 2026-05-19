@@ -13,6 +13,29 @@ import (
 // Group read operations
 // ---------------------------------------------------------------------------
 
+// groupListItem is the actual wire shape returned by /admin/v1/groups/list.
+// The API uses "groupid"/"groupname" instead of "id"/"name".
+type groupListItem struct {
+	ID   int    `json:"groupid"`
+	Name string `json:"groupname"`
+}
+
+func (g groupListItem) toGroup() Group {
+	return Group{ID: g.ID, Name: g.Name}
+}
+
+func decodeGroupList(resp *http.Response) ([]Group, error) {
+	var raw []groupListItem
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		return nil, err
+	}
+	out := make([]Group, len(raw))
+	for i, r := range raw {
+		out[i] = r.toGroup()
+	}
+	return out, nil
+}
+
 // ListGroups returns a paginated slice of groups.
 func (c *Client) ListGroups(ctx context.Context, page, pageSize int) ([]Group, error) {
 	q := url.Values{}
@@ -30,8 +53,8 @@ func (c *Client) ListGroups(ctx context.Context, page, pageSize int) ([]Group, e
 		return nil, err
 	}
 
-	var groups []Group
-	if err := json.NewDecoder(resp.Body).Decode(&groups); err != nil {
+	groups, err := decodeGroupList(resp)
+	if err != nil {
 		return nil, fmt.Errorf("decoding groups response: %w", err)
 	}
 	return groups, nil
@@ -49,11 +72,13 @@ func (c *Client) GetGroupSummary(ctx context.Context) ([]Group, error) {
 		return nil, err
 	}
 
-	var groups []Group
-	if err := json.NewDecoder(resp.Body).Decode(&groups); err != nil {
+	var envelope struct {
+		Groups []Group `json:"groups"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
 		return nil, fmt.Errorf("decoding groups summary response: %w", err)
 	}
-	return groups, nil
+	return envelope.Groups, nil
 }
 
 // GetGroup fetches a single group by its numeric ID.
@@ -70,11 +95,14 @@ func (c *Client) GetGroup(ctx context.Context, id int) (*Group, error) {
 		return nil, err
 	}
 
-	var group Group
-	if err := json.NewDecoder(resp.Body).Decode(&group); err != nil {
+	groups, err := decodeGroupList(resp)
+	if err != nil {
 		return nil, fmt.Errorf("decoding group response: %w", err)
 	}
-	return &group, nil
+	if len(groups) == 0 {
+		return nil, fmt.Errorf("not found: the requested resource does not exist")
+	}
+	return &groups[0], nil
 }
 
 // SearchGroups returns groups whose name starts with the given prefix.
@@ -91,8 +119,8 @@ func (c *Client) SearchGroups(ctx context.Context, prefix string) ([]Group, erro
 		return nil, err
 	}
 
-	var groups []Group
-	if err := json.NewDecoder(resp.Body).Decode(&groups); err != nil {
+	groups, err := decodeGroupList(resp)
+	if err != nil {
 		return nil, fmt.Errorf("decoding groups search response: %w", err)
 	}
 	return groups, nil
@@ -158,7 +186,32 @@ func (c *Client) DeleteGroups(ctx context.Context, ids []int) error {
 // Group member operations
 // ---------------------------------------------------------------------------
 
-// ListMembers returns a paginated slice of all group members.
+// groupMembersWire is the actual wire shape returned by the members endpoints.
+type groupMembersWire struct {
+	GroupID int `json:"groupId"`
+	Clients []struct {
+		MemberID   int    `json:"memberId"`
+		MemberName string `json:"memberName"`
+		MemberAlias string `json:"memberAlias"`
+	} `json:"clients"`
+	Devices []struct {
+		MemberID   int    `json:"memberId"`
+		MemberName string `json:"memberName"`
+	} `json:"devices"`
+}
+
+func (w groupMembersWire) flatten() []GroupMember {
+	var out []GroupMember
+	for _, c := range w.Clients {
+		out = append(out, GroupMember{GroupID: w.GroupID, MemberID: c.MemberID, MemberType: "client", MemberName: c.MemberName, MemberAlias: c.MemberAlias})
+	}
+	for _, d := range w.Devices {
+		out = append(out, GroupMember{GroupID: w.GroupID, MemberID: d.MemberID, MemberType: "device", MemberName: d.MemberName})
+	}
+	return out
+}
+
+// ListMembers returns all group members across all groups.
 func (c *Client) ListMembers(ctx context.Context, page, pageSize int) ([]GroupMember, error) {
 	q := url.Values{}
 	q.Set("Page", strconv.Itoa(page))
@@ -175,11 +228,17 @@ func (c *Client) ListMembers(ctx context.Context, page, pageSize int) ([]GroupMe
 		return nil, err
 	}
 
-	var members []GroupMember
-	if err := json.NewDecoder(resp.Body).Decode(&members); err != nil {
+	var envelope struct {
+		Groups []groupMembersWire `json:"groups"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
 		return nil, fmt.Errorf("decoding members response: %w", err)
 	}
-	return members, nil
+	var out []GroupMember
+	for _, g := range envelope.Groups {
+		out = append(out, g.flatten()...)
+	}
+	return out, nil
 }
 
 // ListGroupMembers returns all members of a specific group.
@@ -196,11 +255,11 @@ func (c *Client) ListGroupMembers(ctx context.Context, groupID int) ([]GroupMemb
 		return nil, err
 	}
 
-	var members []GroupMember
-	if err := json.NewDecoder(resp.Body).Decode(&members); err != nil {
+	var wire groupMembersWire
+	if err := json.NewDecoder(resp.Body).Decode(&wire); err != nil {
 		return nil, fmt.Errorf("decoding group members response: %w", err)
 	}
-	return members, nil
+	return wire.flatten(), nil
 }
 
 // AddMembers adds a member (client or device) to a group.

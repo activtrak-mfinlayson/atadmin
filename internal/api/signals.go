@@ -7,6 +7,17 @@ import (
 	"net/http"
 )
 
+// signalWire is the actual wire shape returned by /admin/v1/signals.
+// Each item wraps the signal object under a "signal" key with "active" for enabled.
+type signalWire struct {
+	Signal struct {
+		ID      int    `json:"id"`
+		Name    string `json:"name"`
+		Type    int    `json:"type"`
+		Active  bool   `json:"active"`
+	} `json:"signal"`
+}
+
 // ListSignals returns all signals configured for the account.
 // GET /admin/v1/signals
 func (c *Client) ListSignals(ctx context.Context) ([]Signal, error) {
@@ -18,15 +29,24 @@ func (c *Client) ListSignals(ctx context.Context) ([]Signal, error) {
 	if err := checkResponse(resp); err != nil {
 		return nil, err
 	}
-	var signals []Signal
-	if err := json.NewDecoder(resp.Body).Decode(&signals); err != nil {
+	var raw []signalWire
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
 		return nil, fmt.Errorf("decoding signals response: %w", err)
 	}
-	return signals, nil
+	out := make([]Signal, len(raw))
+	for i, r := range raw {
+		out[i] = Signal{
+			ID:      r.Signal.ID,
+			Name:    r.Signal.Name,
+			Type:    fmt.Sprintf("%d", r.Signal.Type),
+			Enabled: r.Signal.Active,
+		}
+	}
+	return out, nil
 }
 
 // GetLegacyNotifications returns signals from the legacy notifications endpoint.
-// GET /admin/legacy/notifications
+// GET /admin/legacy/notifications — returns items directly (no "signal" wrapper), type is int.
 func (c *Client) GetLegacyNotifications(ctx context.Context) ([]Signal, error) {
 	resp, err := c.doRequest(ctx, http.MethodGet, "/admin/legacy/notifications", nil)
 	if err != nil {
@@ -36,11 +56,20 @@ func (c *Client) GetLegacyNotifications(ctx context.Context) ([]Signal, error) {
 	if err := checkResponse(resp); err != nil {
 		return nil, err
 	}
-	var signals []Signal
-	if err := json.NewDecoder(resp.Body).Decode(&signals); err != nil {
+	var raw []struct {
+		ID     int    `json:"id"`
+		Name   string `json:"name"`
+		Type   int    `json:"type"`
+		Active bool   `json:"active"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
 		return nil, fmt.Errorf("decoding legacy notifications response: %w", err)
 	}
-	return signals, nil
+	out := make([]Signal, len(raw))
+	for i, r := range raw {
+		out[i] = Signal{ID: r.ID, Name: r.Name, Type: fmt.Sprintf("%d", r.Type), Enabled: r.Active}
+	}
+	return out, nil
 }
 
 // CreateSignal creates a new signal and returns its assigned ID.

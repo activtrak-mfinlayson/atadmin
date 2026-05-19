@@ -307,13 +307,9 @@ func newGroupsMembersListCmd(state *appState) *cobra.Command {
 
 				rows := make([][]string, len(members))
 				for i, m := range members {
-					rows[i] = []string{
-						strconv.Itoa(m.GroupID),
-						strconv.Itoa(m.MemberID),
-						m.MemberType,
-					}
+					rows[i] = []string{strconv.Itoa(m.MemberID), m.MemberName, m.MemberAlias, m.MemberType}
 				}
-				output.Table(cmd.OutOrStdout(), []string{"GROUP ID", "MEMBER ID", "MEMBER TYPE"}, rows)
+				output.Table(cmd.OutOrStdout(), []string{"ID", "NAME", "ALIAS", "TYPE"}, rows)
 				return nil
 			}
 
@@ -328,13 +324,9 @@ func newGroupsMembersListCmd(state *appState) *cobra.Command {
 
 			rows := make([][]string, len(members))
 			for i, m := range members {
-				rows[i] = []string{
-					strconv.Itoa(m.GroupID),
-					strconv.Itoa(m.MemberID),
-					m.MemberType,
-				}
+				rows[i] = []string{strconv.Itoa(m.GroupID), strconv.Itoa(m.MemberID), m.MemberName, m.MemberType}
 			}
-			output.Table(cmd.OutOrStdout(), []string{"GROUP ID", "MEMBER ID", "MEMBER TYPE"}, rows)
+			output.Table(cmd.OutOrStdout(), []string{"GROUP ID", "ID", "NAME", "TYPE"}, rows)
 			return nil
 		},
 	}

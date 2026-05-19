@@ -28,8 +28,22 @@ func TestListSignals(t *testing.T) {
 		if r.URL.Path != "/admin/v1/signals" {
 			t.Errorf("path = %s, want /admin/v1/signals", r.URL.Path)
 		}
+		// Serve actual wire format: each item wrapped under "signal" key, type is int, active not enabled.
+		type wireSignal struct {
+			ID     int    `json:"id"`
+			Name   string `json:"name"`
+			Type   int    `json:"type"`
+			Active bool   `json:"active"`
+		}
+		type wireItem struct {
+			Signal wireSignal `json:"signal"`
+		}
+		wire := make([]wireItem, len(fixture))
+		for i, s := range fixture {
+			wire[i] = wireItem{Signal: wireSignal{ID: s.ID, Name: s.Name, Type: 1, Active: s.Enabled}}
+		}
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(fixture); err != nil {
+		if err := json.NewEncoder(w).Encode(wire); err != nil {
 			t.Errorf("encoding fixture: %v", err)
 		}
 	}))
@@ -59,9 +73,7 @@ func TestListSignals(t *testing.T) {
 func TestListSignals_Empty(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode([]api.Signal{}); err != nil {
-			t.Errorf("encoding fixture: %v", err)
-		}
+		_, _ = w.Write([]byte("[]"))
 	}))
 	defer server.Close()
 

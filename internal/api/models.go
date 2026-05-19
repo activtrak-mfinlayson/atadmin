@@ -19,9 +19,9 @@ type ATClient struct {
 // DNTEntry represents a Do Not Track rule.
 type DNTEntry struct {
 	ID          int    `json:"id"`
-	LogonDomain string `json:"logonDomain"`
+	LogonDomain string `json:"logondomain"`
 	Username    string `json:"username"`
-	IsGlobal    bool   `json:"isGlobal"`
+	IsGlobal    bool   `json:"globaluser"`
 }
 
 // MergeUser describes a single source→target user merge record.
@@ -42,6 +42,8 @@ type GroupMember struct {
 	GroupID    int    `json:"groupId"`
 	MemberID   int    `json:"memberId"`
 	MemberType string `json:"memberType"`
+	MemberName string `json:"memberName"`
+	MemberAlias string `json:"memberAlias"`
 }
 
 // Consumer represents an ActivTrak account consumer (admin/report user).
@@ -55,7 +57,7 @@ type Consumer struct {
 // Device represents a tracked endpoint device in the ActivTrak system.
 type Device struct {
 	ID       int    `json:"id"`
-	Hostname string `json:"hostname"`
+	Hostname string `json:"name"`
 	Status   string `json:"status"`
 }
 
@@ -86,7 +88,7 @@ type Alarm struct {
 
 // Schedule represents an ActivTrak work schedule.
 type Schedule struct {
-	ID        int    `json:"id"`
+	ID        string `json:"id"`
 	Name      string `json:"name"`
 	Type      string `json:"type"`
 	IsDefault bool   `json:"isDefault"`
@@ -94,9 +96,10 @@ type Schedule struct {
 
 // UserScheduleInfo describes a user's schedule assignment.
 type UserScheduleInfo struct {
-	UserID     int    `json:"userId"`
-	ScheduleID int    `json:"scheduleId"`
-	Name       string `json:"name"`
+	UserID       string `json:"userId"`
+	UserName     string `json:"userName"`
+	ScheduleID   string `json:"scheduleId"`
+	ScheduleName string `json:"scheduleName"`
 }
 
 // ApiKey represents a Public API credential.

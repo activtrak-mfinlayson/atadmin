@@ -7,6 +7,24 @@ import (
 	"net/http"
 )
 
+// scheduleWire is the wrapper shape returned by GET /admin/v1/schedules.
+// Each list item has a "schedule" key.
+type scheduleWire struct {
+	Schedule Schedule `json:"schedule"`
+}
+
+// userScheduleWire is the shape returned by GET /admin/v1/schedules/*/users.
+type userScheduleWire struct {
+	ScheduleInfo struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	} `json:"scheduleInfo"`
+	UserInfo struct {
+		UserID   string `json:"userId"`
+		UserName string `json:"userName"`
+	} `json:"userInfo"`
+}
+
 // ListSchedules returns all schedules for the account.
 // GET /admin/v1/schedules
 func (c *Client) ListSchedules(ctx context.Context) ([]Schedule, error) {
@@ -18,56 +36,48 @@ func (c *Client) ListSchedules(ctx context.Context) ([]Schedule, error) {
 	if err := checkResponse(resp); err != nil {
 		return nil, err
 	}
-	var schedules []Schedule
-	if err := json.NewDecoder(resp.Body).Decode(&schedules); err != nil {
+	var raw []scheduleWire
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
 		return nil, fmt.Errorf("decoding schedules response: %w", err)
 	}
-	return schedules, nil
+	out := make([]Schedule, len(raw))
+	for i, r := range raw {
+		out[i] = r.Schedule
+	}
+	return out, nil
 }
 
-// GetSchedule returns a single schedule by ID.
+// GetSchedule returns a single schedule by UUID.
 // GET /admin/v1/schedules/{id}
-func (c *Client) GetSchedule(ctx context.Context, id int) (*Schedule, error) {
-	path := fmt.Sprintf("/admin/v1/schedules/%d", id)
-	resp, err := c.doRequest(ctx, http.MethodGet, path, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = resp.Body.Close() }()
-	if err := checkResponse(resp); err != nil {
-		return nil, err
-	}
-	var schedule Schedule
-	if err := json.NewDecoder(resp.Body).Decode(&schedule); err != nil {
-		return nil, fmt.Errorf("decoding schedule response: %w", err)
-	}
-	return &schedule, nil
+func (c *Client) GetSchedule(ctx context.Context, id string) (*Schedule, error) {
+	path := fmt.Sprintf("/admin/v1/schedules/%s", id)
+	return c.getSchedule(ctx, path)
 }
 
-// CreateSchedule creates a new schedule and returns its assigned ID.
+// CreateSchedule creates a new schedule and returns its assigned UUID.
 // POST /admin/v1/schedule
-func (c *Client) CreateSchedule(ctx context.Context, body map[string]any) (int, error) {
+func (c *Client) CreateSchedule(ctx context.Context, body map[string]any) (string, error) {
 	resp, err := c.doRequest(ctx, http.MethodPost, "/admin/v1/schedule", body)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if err := checkResponse(resp); err != nil {
-		return 0, err
+		return "", err
 	}
 	var result struct {
-		ID int `json:"id"`
+		ID string `json:"id"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return 0, fmt.Errorf("decoding create schedule response: %w", err)
+		return "", fmt.Errorf("decoding create schedule response: %w", err)
 	}
 	return result.ID, nil
 }
 
-// DeleteSchedule removes the schedule with the given ID.
+// DeleteSchedule removes the schedule with the given UUID.
 // DELETE /admin/v1/schedules/{id}
-func (c *Client) DeleteSchedule(ctx context.Context, id int) error {
-	path := fmt.Sprintf("/admin/v1/schedules/%d", id)
+func (c *Client) DeleteSchedule(ctx context.Context, id string) error {
+	path := fmt.Sprintf("/admin/v1/schedules/%s", id)
 	resp, err := c.doRequest(ctx, http.MethodDelete, path, nil)
 	if err != nil {
 		return err
@@ -84,8 +94,8 @@ func (c *Client) GetReportingDefault(ctx context.Context) (*Schedule, error) {
 
 // SetReportingDefault sets the default reporting schedule to the given scheduleID.
 // PUT /admin/v1/schedules/reporting/default/{scheduleId}
-func (c *Client) SetReportingDefault(ctx context.Context, scheduleID int) error {
-	path := fmt.Sprintf("/admin/v1/schedules/reporting/default/%d", scheduleID)
+func (c *Client) SetReportingDefault(ctx context.Context, scheduleID string) error {
+	path := fmt.Sprintf("/admin/v1/schedules/reporting/default/%s", scheduleID)
 	resp, err := c.doRequest(ctx, http.MethodPut, path, nil)
 	if err != nil {
 		return err
@@ -102,8 +112,8 @@ func (c *Client) GetShiftDefault(ctx context.Context) (*Schedule, error) {
 
 // SetShiftDefault sets the default shift schedule to the given scheduleID.
 // PUT /admin/v1/schedules/shift/default/{scheduleId}
-func (c *Client) SetShiftDefault(ctx context.Context, scheduleID int) error {
-	path := fmt.Sprintf("/admin/v1/schedules/shift/default/%d", scheduleID)
+func (c *Client) SetShiftDefault(ctx context.Context, scheduleID string) error {
+	path := fmt.Sprintf("/admin/v1/schedules/shift/default/%s", scheduleID)
 	resp, err := c.doRequest(ctx, http.MethodPut, path, nil)
 	if err != nil {
 		return err
@@ -136,17 +146,17 @@ func (c *Client) RemoveShiftUsers(ctx context.Context, ids []int) error {
 	return c.deleteScheduleUsers(ctx, "/admin/v1/schedules/shift/users", ids)
 }
 
-// GetScheduleUsers returns the users assigned to the schedule with the given ID.
+// GetScheduleUsers returns the users assigned to the schedule with the given UUID.
 // GET /admin/v1/schedules/{scheduleId}/users
-func (c *Client) GetScheduleUsers(ctx context.Context, scheduleID int) ([]UserScheduleInfo, error) {
-	path := fmt.Sprintf("/admin/v1/schedules/%d/users", scheduleID)
+func (c *Client) GetScheduleUsers(ctx context.Context, scheduleID string) ([]UserScheduleInfo, error) {
+	path := fmt.Sprintf("/admin/v1/schedules/%s/users", scheduleID)
 	return c.getScheduleUsers(ctx, path)
 }
 
-// SetScheduleUsers assigns the given user IDs to the schedule with the given ID.
+// SetScheduleUsers assigns the given user IDs to the schedule with the given UUID.
 // PUT /admin/v1/schedules/{scheduleId}/users
-func (c *Client) SetScheduleUsers(ctx context.Context, scheduleID int, userIDs []int) error {
-	path := fmt.Sprintf("/admin/v1/schedules/%d/users", scheduleID)
+func (c *Client) SetScheduleUsers(ctx context.Context, scheduleID string, userIDs []int) error {
+	path := fmt.Sprintf("/admin/v1/schedules/%s/users", scheduleID)
 	body := struct {
 		UserIDs []int `json:"userIds"`
 	}{UserIDs: userIDs}
@@ -160,8 +170,8 @@ func (c *Client) SetScheduleUsers(ctx context.Context, scheduleID int, userIDs [
 
 // MoveUserToSchedule moves a single user to the given schedule.
 // PUT /admin/v1/schedules/{scheduleId}/user/{userId}
-func (c *Client) MoveUserToSchedule(ctx context.Context, scheduleID, userID int) error {
-	path := fmt.Sprintf("/admin/v1/schedules/%d/user/%d", scheduleID, userID)
+func (c *Client) MoveUserToSchedule(ctx context.Context, scheduleID string, userID int) error {
+	path := fmt.Sprintf("/admin/v1/schedules/%s/user/%d", scheduleID, userID)
 	resp, err := c.doRequest(ctx, http.MethodPut, path, nil)
 	if err != nil {
 		return err
@@ -237,11 +247,20 @@ func (c *Client) getScheduleUsers(ctx context.Context, path string) ([]UserSched
 	if err := checkResponse(resp); err != nil {
 		return nil, err
 	}
-	var users []UserScheduleInfo
-	if err := json.NewDecoder(resp.Body).Decode(&users); err != nil {
+	var raw []userScheduleWire
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
 		return nil, fmt.Errorf("decoding schedule users from %s: %w", path, err)
 	}
-	return users, nil
+	out := make([]UserScheduleInfo, len(raw))
+	for i, r := range raw {
+		out[i] = UserScheduleInfo{
+			UserID:       r.UserInfo.UserID,
+			UserName:     r.UserInfo.UserName,
+			ScheduleID:   r.ScheduleInfo.ID,
+			ScheduleName: r.ScheduleInfo.Name,
+		}
+	}
+	return out, nil
 }
 
 func (c *Client) deleteScheduleUsers(ctx context.Context, path string, ids []int) error {

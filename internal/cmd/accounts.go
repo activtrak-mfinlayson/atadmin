@@ -29,6 +29,7 @@ func newSettingsCmd(state *appState) *cobra.Command {
 	settings.AddCommand(newSettingsRoleAccessCmd(state))
 	settings.AddCommand(newSettingsRoleDateFilterCmd(state))
 	settings.AddCommand(newSettingsTimezoneCmd(state))
+	settings.AddCommand(newSettingsTimezonesCmd(state))
 	settings.AddCommand(newSettingsLocalTimezoneCmd(state))
 	settings.AddCommand(newSettingsAgentDurationCmd(state))
 	settings.AddCommand(newSettingsAgentAuditCmd(state))
@@ -352,25 +353,35 @@ func newSettingsTimezoneCmd(state *appState) *cobra.Command {
 	setCmd.Flags().String("file", "", "Path to JSON file (required)")
 	tz.AddCommand(setCmd)
 
-	listTZ := &cobra.Command{
+	return tz
+}
+
+func newSettingsTimezonesCmd(state *appState) *cobra.Command {
+	tzs := &cobra.Command{
 		Use:   "timezones",
 		Short: "List available timezones",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			tzs, err := state.client.ListTimezones(cmd.Context())
+			return cmd.Help()
+		},
+	}
+	tzs.AddCommand(&cobra.Command{
+		Use:   "list",
+		Short: "List all available timezone identifiers",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			items, err := state.client.ListTimezones(cmd.Context())
 			if err != nil {
 				return fmt.Errorf("listing timezones: %w", err)
 			}
-			rows := make([][]string, 0, len(tzs))
-			for _, t := range tzs {
-				name := fmt.Sprintf("%v", t["name"])
-				rows = append(rows, []string{name})
+			rows := make([][]string, 0, len(items))
+			for _, t := range items {
+				id := fmt.Sprintf("%v", t["id"])
+				rows = append(rows, []string{id})
 			}
-			output.Table(cmd.OutOrStdout(), []string{"NAME"}, rows)
+			output.Table(cmd.OutOrStdout(), []string{"TIMEZONE"}, rows)
 			return nil
 		},
-	}
-	tz.AddCommand(listTZ)
-	return tz
+	})
+	return tzs
 }
 
 // ---------------------------------------------------------------------------

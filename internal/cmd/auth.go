@@ -17,7 +17,7 @@ import (
 	"github.com/activtrak-mfinlayson/atadmin/internal/tty"
 )
 
-const tokenURL = "https://app.activtrak.com/api/v1/integrations"
+const tokenURL = "https://app.activtrak.com/#/app/integrations/apikeys"
 
 func newAuthCmd() *cobra.Command {
 	auth := &cobra.Command{

@@ -222,11 +222,13 @@ func (c *Client) ListDoNotTrack(ctx context.Context) ([]DNTEntry, error) {
 		return nil, err
 	}
 
-	var entries []DNTEntry
-	if err := json.NewDecoder(resp.Body).Decode(&entries); err != nil {
+	var envelope struct {
+		Records []DNTEntry `json:"records"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
 		return nil, fmt.Errorf("decoding do-not-track response: %w", err)
 	}
-	return entries, nil
+	return envelope.Records, nil
 }
 
 // AddDoNotTrack adds a single Do Not Track rule for the given domain/username.

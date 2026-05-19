@@ -9,6 +9,19 @@ import (
 	"strconv"
 )
 
+// alarmWire is the actual wire shape returned by the alarms endpoints.
+// The API uses "alarmid" instead of "id" and "active" instead of "enabled".
+type alarmWire struct {
+	ID      int    `json:"alarmid"`
+	Name    string `json:"name"`
+	Type    string `json:"type"`
+	Enabled bool   `json:"active"`
+}
+
+func (w alarmWire) toAlarm() Alarm {
+	return Alarm{ID: w.ID, Name: w.Name, Type: w.Type, Enabled: w.Enabled}
+}
+
 // ListAlarms returns a paginated list of alarms.
 // GET /admin/v1/alarms
 func (c *Client) ListAlarms(ctx context.Context, page, pageSize int) ([]Alarm, error) {
@@ -25,11 +38,15 @@ func (c *Client) ListAlarms(ctx context.Context, page, pageSize int) ([]Alarm, e
 	if err := checkResponse(resp); err != nil {
 		return nil, err
 	}
-	var alarms []Alarm
-	if err := json.NewDecoder(resp.Body).Decode(&alarms); err != nil {
+	var raw []alarmWire
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
 		return nil, fmt.Errorf("decoding alarms response: %w", err)
 	}
-	return alarms, nil
+	out := make([]Alarm, len(raw))
+	for i, r := range raw {
+		out[i] = r.toAlarm()
+	}
+	return out, nil
 }
 
 // GetAlarm returns a single alarm by ID.
@@ -44,10 +61,14 @@ func (c *Client) GetAlarm(ctx context.Context, id int) (*Alarm, error) {
 	if err := checkResponse(resp); err != nil {
 		return nil, err
 	}
-	var alarm Alarm
-	if err := json.NewDecoder(resp.Body).Decode(&alarm); err != nil {
+	var raw []alarmWire
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
 		return nil, fmt.Errorf("decoding alarm response: %w", err)
 	}
+	if len(raw) == 0 {
+		return nil, fmt.Errorf("not found: the requested resource does not exist")
+	}
+	alarm := raw[0].toAlarm()
 	return &alarm, nil
 }
 

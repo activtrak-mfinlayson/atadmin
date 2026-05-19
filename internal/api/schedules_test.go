@@ -17,8 +17,8 @@ import (
 
 func TestListSchedules(t *testing.T) {
 	fixture := []api.Schedule{
-		{ID: 1, Name: "Standard Week", Type: "reporting", IsDefault: true},
-		{ID: 2, Name: "Night Shift", Type: "shift", IsDefault: false},
+		{ID: "uuid-1", Name: "Standard Week", Type: "reporting", IsDefault: true},
+		{ID: "uuid-2", Name: "Night Shift", Type: "shift", IsDefault: false},
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -28,8 +28,16 @@ func TestListSchedules(t *testing.T) {
 		if r.URL.Path != "/admin/v1/schedules" {
 			t.Errorf("path = %s, want /admin/v1/schedules", r.URL.Path)
 		}
+		// API wraps each schedule under a "schedule" key
+		type wire struct {
+			Schedule api.Schedule `json:"schedule"`
+		}
+		wrapped := make([]wire, len(fixture))
+		for i, s := range fixture {
+			wrapped[i] = wire{Schedule: s}
+		}
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(fixture); err != nil {
+		if err := json.NewEncoder(w).Encode(wrapped); err != nil {
 			t.Errorf("encoding fixture: %v", err)
 		}
 	}))
@@ -45,7 +53,7 @@ func TestListSchedules(t *testing.T) {
 	}
 	for i, want := range fixture {
 		if got[i].ID != want.ID {
-			t.Errorf("schedules[%d].ID = %d, want %d", i, got[i].ID, want.ID)
+			t.Errorf("schedules[%d].ID = %q, want %q", i, got[i].ID, want.ID)
 		}
 		if got[i].Name != want.Name {
 			t.Errorf("schedules[%d].Name = %q, want %q", i, got[i].Name, want.Name)
@@ -63,24 +71,24 @@ func TestListSchedules(t *testing.T) {
 func TestGetSchedule(t *testing.T) {
 	tests := []struct {
 		name    string
-		id      int
+		id      string
 		fixture api.Schedule
 	}{
 		{
 			name:    "existing schedule",
-			id:      3,
-			fixture: api.Schedule{ID: 3, Name: "Day Shift", Type: "shift", IsDefault: false},
+			id:      "uuid-3",
+			fixture: api.Schedule{ID: "uuid-3", Name: "Day Shift", Type: "shift", IsDefault: false},
 		},
 		{
 			name:    "default schedule",
-			id:      1,
-			fixture: api.Schedule{ID: 1, Name: "Standard Week", Type: "reporting", IsDefault: true},
+			id:      "uuid-1",
+			fixture: api.Schedule{ID: "uuid-1", Name: "Standard Week", Type: "reporting", IsDefault: true},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			wantPath := fmt.Sprintf("/admin/v1/schedules/%d", tc.id)
+			wantPath := fmt.Sprintf("/admin/v1/schedules/%s", tc.id)
 
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.Method != http.MethodGet {
@@ -99,10 +107,10 @@ func TestGetSchedule(t *testing.T) {
 			client := newTestClient(t, server.URL, "tok")
 			got, err := client.GetSchedule(context.Background(), tc.id)
 			if err != nil {
-				t.Fatalf("GetSchedule(%d) error: %v", tc.id, err)
+				t.Fatalf("GetSchedule(%q) error: %v", tc.id, err)
 			}
 			if got.ID != tc.fixture.ID {
-				t.Errorf("ID = %d, want %d", got.ID, tc.fixture.ID)
+				t.Errorf("ID = %q, want %q", got.ID, tc.fixture.ID)
 			}
 			if got.Name != tc.fixture.Name {
 				t.Errorf("Name = %q, want %q", got.Name, tc.fixture.Name)
@@ -121,16 +129,16 @@ func TestGetSchedule(t *testing.T) {
 func TestSetScheduleUsers(t *testing.T) {
 	tests := []struct {
 		name       string
-		scheduleID int
+		scheduleID string
 		userIDs    []int
 	}{
-		{name: "assign two users", scheduleID: 5, userIDs: []int{101, 102}},
-		{name: "clear users", scheduleID: 7, userIDs: []int{}},
+		{name: "assign two users", scheduleID: "uuid-5", userIDs: []int{101, 102}},
+		{name: "clear users", scheduleID: "uuid-7", userIDs: []int{}},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			wantPath := fmt.Sprintf("/admin/v1/schedules/%d/users", tc.scheduleID)
+			wantPath := fmt.Sprintf("/admin/v1/schedules/%s/users", tc.scheduleID)
 			var gotBody struct {
 				UserIDs []int `json:"userIds"`
 			}
@@ -173,7 +181,7 @@ func TestGetUserReportingSchedule(t *testing.T) {
 		{
 			name:    "user with reporting schedule",
 			userID:  42,
-			fixture: api.Schedule{ID: 1, Name: "Standard Week", Type: "reporting", IsDefault: true},
+			fixture: api.Schedule{ID: "uuid-1", Name: "Standard Week", Type: "reporting", IsDefault: true},
 		},
 	}
 
@@ -201,7 +209,7 @@ func TestGetUserReportingSchedule(t *testing.T) {
 				t.Fatalf("GetUserReportingSchedule(%d) error: %v", tc.userID, err)
 			}
 			if got.ID != tc.fixture.ID {
-				t.Errorf("ID = %d, want %d", got.ID, tc.fixture.ID)
+				t.Errorf("ID = %q, want %q", got.ID, tc.fixture.ID)
 			}
 			if got.Name != tc.fixture.Name {
 				t.Errorf("Name = %q, want %q", got.Name, tc.fixture.Name)

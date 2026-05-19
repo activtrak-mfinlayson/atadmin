@@ -52,12 +52,7 @@ func newSchedulesListCmd(state *appState) *cobra.Command {
 
 			rows := make([][]string, len(scheds))
 			for i, s := range scheds {
-				rows[i] = []string{
-					strconv.Itoa(s.ID),
-					s.Name,
-					s.Type,
-					strconv.FormatBool(s.IsDefault),
-				}
+				rows[i] = []string{s.ID, s.Name, s.Type, strconv.FormatBool(s.IsDefault)}
 			}
 			output.Table(cmd.OutOrStdout(), []string{"ID", "NAME", "TYPE", "DEFAULT"}, rows)
 			return nil
@@ -67,23 +62,19 @@ func newSchedulesListCmd(state *appState) *cobra.Command {
 	return cmd
 }
 
-// newSchedulesGetCmd implements "schedules get <id>".
+// newSchedulesGetCmd implements "schedules get <uuid>".
 func newSchedulesGetCmd(state *appState) *cobra.Command {
 	return &cobra.Command{
 		Use:   "get <id>",
-		Short: "Get a schedule by ID",
+		Short: "Get a schedule by ID (UUID)",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, err := strconv.Atoi(args[0])
+			s, err := state.client.GetSchedule(cmd.Context(), args[0])
 			if err != nil {
-				return fmt.Errorf("invalid schedule ID %q: must be an integer", args[0])
-			}
-			s, err := state.client.GetSchedule(cmd.Context(), id)
-			if err != nil {
-				return fmt.Errorf("getting schedule %d: %w", id, err)
+				return fmt.Errorf("getting schedule %q: %w", args[0], err)
 			}
 			output.KeyValue(cmd.OutOrStdout(), map[string]string{
-				"id":        strconv.Itoa(s.ID),
+				"id":        s.ID,
 				"name":      s.Name,
 				"type":      s.Type,
 				"isDefault": strconv.FormatBool(s.IsDefault),
@@ -112,7 +103,7 @@ func newSchedulesCreateCmd(state *appState) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("creating schedule: %w", err)
 			}
-			_, _ = fmt.Fprintln(cmd.OutOrStdout(), strconv.Itoa(id))
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), id)
 			return nil
 		},
 	}
@@ -120,24 +111,21 @@ func newSchedulesCreateCmd(state *appState) *cobra.Command {
 	return cmd
 }
 
-// newSchedulesDeleteCmd implements "schedules delete <id>".
+// newSchedulesDeleteCmd implements "schedules delete <uuid>".
 func newSchedulesDeleteCmd(state *appState) *cobra.Command {
 	return &cobra.Command{
 		Use:   "delete <id>",
-		Short: "Delete a schedule by ID",
+		Short: "Delete a schedule by ID (UUID)",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, err := strconv.Atoi(args[0])
-			if err != nil {
-				return fmt.Errorf("invalid schedule ID %q: must be an integer", args[0])
-			}
+			id := args[0]
 			if err := state.client.DeleteSchedule(cmd.Context(), id); err != nil {
-				return fmt.Errorf("deleting schedule %d: %w", id, err)
+				return fmt.Errorf("deleting schedule %q: %w", id, err)
 			}
 			if tty.IsTerminal() {
-				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Deleted schedule %d\n", id)
+				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Deleted schedule %s\n", id)
 			} else {
-				_, _ = fmt.Fprintln(cmd.OutOrStdout(), strconv.Itoa(id))
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), id)
 			}
 			return nil
 		},
@@ -178,7 +166,7 @@ func newSchedulesReportingDefaultCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("getting reporting default: %w", err)
 			}
 			output.KeyValue(cmd.OutOrStdout(), map[string]string{
-				"id":        strconv.Itoa(s.ID),
+				"id":        s.ID,
 				"name":      s.Name,
 				"type":      s.Type,
 				"isDefault": strconv.FormatBool(s.IsDefault),
@@ -188,17 +176,13 @@ func newSchedulesReportingDefaultCmd(state *appState) *cobra.Command {
 	})
 	def.AddCommand(&cobra.Command{
 		Use:   "set <id>",
-		Short: "Set the default reporting schedule by ID",
+		Short: "Set the default reporting schedule by UUID",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, err := strconv.Atoi(args[0])
-			if err != nil {
-				return fmt.Errorf("invalid schedule ID %q: must be an integer", args[0])
-			}
-			if err := state.client.SetReportingDefault(cmd.Context(), id); err != nil {
+			if err := state.client.SetReportingDefault(cmd.Context(), args[0]); err != nil {
 				return fmt.Errorf("setting reporting default: %w", err)
 			}
-			printSuccess(cmd, fmt.Sprintf("Reporting default set to schedule %d", id))
+			printSuccess(cmd, fmt.Sprintf("Reporting default set to schedule %s", args[0]))
 			return nil
 		},
 	})
@@ -223,9 +207,9 @@ func newSchedulesReportingUsersCmd(state *appState) *cobra.Command {
 			}
 			rows := make([][]string, len(us))
 			for i, u := range us {
-				rows[i] = []string{strconv.Itoa(u.UserID), strconv.Itoa(u.ScheduleID), u.Name}
+				rows[i] = []string{u.UserID, u.UserName, u.ScheduleName}
 			}
-			output.Table(cmd.OutOrStdout(), []string{"USER ID", "SCHEDULE ID", "NAME"}, rows)
+			output.Table(cmd.OutOrStdout(), []string{"USER ID", "USERNAME", "SCHEDULE"}, rows)
 			return nil
 		},
 	})
@@ -288,7 +272,7 @@ func newSchedulesShiftDefaultCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("getting shift default: %w", err)
 			}
 			output.KeyValue(cmd.OutOrStdout(), map[string]string{
-				"id":        strconv.Itoa(s.ID),
+				"id":        s.ID,
 				"name":      s.Name,
 				"type":      s.Type,
 				"isDefault": strconv.FormatBool(s.IsDefault),
@@ -298,17 +282,13 @@ func newSchedulesShiftDefaultCmd(state *appState) *cobra.Command {
 	})
 	def.AddCommand(&cobra.Command{
 		Use:   "set <id>",
-		Short: "Set the default shift schedule by ID",
+		Short: "Set the default shift schedule by UUID",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			id, err := strconv.Atoi(args[0])
-			if err != nil {
-				return fmt.Errorf("invalid schedule ID %q: must be an integer", args[0])
-			}
-			if err := state.client.SetShiftDefault(cmd.Context(), id); err != nil {
+			if err := state.client.SetShiftDefault(cmd.Context(), args[0]); err != nil {
 				return fmt.Errorf("setting shift default: %w", err)
 			}
-			printSuccess(cmd, fmt.Sprintf("Shift default set to schedule %d", id))
+			printSuccess(cmd, fmt.Sprintf("Shift default set to schedule %s", args[0]))
 			return nil
 		},
 	})
@@ -333,9 +313,9 @@ func newSchedulesShiftUsersCmd(state *appState) *cobra.Command {
 			}
 			rows := make([][]string, len(us))
 			for i, u := range us {
-				rows[i] = []string{strconv.Itoa(u.UserID), strconv.Itoa(u.ScheduleID), u.Name}
+				rows[i] = []string{u.UserID, u.UserName, u.ScheduleName}
 			}
-			output.Table(cmd.OutOrStdout(), []string{"USER ID", "SCHEDULE ID", "NAME"}, rows)
+			output.Table(cmd.OutOrStdout(), []string{"USER ID", "USERNAME", "SCHEDULE"}, rows)
 			return nil
 		},
 	})
@@ -365,7 +345,7 @@ func newSchedulesShiftUsersCmd(state *appState) *cobra.Command {
 }
 
 // ---------------------------------------------------------------------------
-// schedules users <schedule-id>
+// schedules users <schedule-uuid>
 // ---------------------------------------------------------------------------
 
 func newSchedulesUsersCmd(state *appState) *cobra.Command {
@@ -382,19 +362,15 @@ func newSchedulesUsersCmd(state *appState) *cobra.Command {
 		Short: "List users assigned to a schedule",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			scheduleID, err := strconv.Atoi(args[0])
+			us, err := state.client.GetScheduleUsers(cmd.Context(), args[0])
 			if err != nil {
-				return fmt.Errorf("invalid schedule ID %q: must be an integer", args[0])
-			}
-			us, err := state.client.GetScheduleUsers(cmd.Context(), scheduleID)
-			if err != nil {
-				return fmt.Errorf("listing users for schedule %d: %w", scheduleID, err)
+				return fmt.Errorf("listing users for schedule %q: %w", args[0], err)
 			}
 			rows := make([][]string, len(us))
 			for i, u := range us {
-				rows[i] = []string{strconv.Itoa(u.UserID), strconv.Itoa(u.ScheduleID), u.Name}
+				rows[i] = []string{u.UserID, u.UserName, u.ScheduleName}
 			}
-			output.Table(cmd.OutOrStdout(), []string{"USER ID", "SCHEDULE ID", "NAME"}, rows)
+			output.Table(cmd.OutOrStdout(), []string{"USER ID", "USERNAME", "SCHEDULE"}, rows)
 			return nil
 		},
 	}
@@ -405,10 +381,6 @@ func newSchedulesUsersCmd(state *appState) *cobra.Command {
 		Short: "Set users assigned to a schedule (replaces current assignment)",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			scheduleID, err := strconv.Atoi(args[0])
-			if err != nil {
-				return fmt.Errorf("invalid schedule ID %q: must be an integer", args[0])
-			}
 			idsFlag, _ := cmd.Flags().GetString("ids")
 			if idsFlag == "" {
 				return fmt.Errorf("--ids is required")
@@ -417,10 +389,10 @@ func newSchedulesUsersCmd(state *appState) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("parsing --ids: %w", err)
 			}
-			if err := state.client.SetScheduleUsers(cmd.Context(), scheduleID, ids); err != nil {
-				return fmt.Errorf("setting users for schedule %d: %w", scheduleID, err)
+			if err := state.client.SetScheduleUsers(cmd.Context(), args[0], ids); err != nil {
+				return fmt.Errorf("setting users for schedule %q: %w", args[0], err)
 			}
-			printSuccess(cmd, fmt.Sprintf("Updated %d users for schedule %d", len(ids), scheduleID))
+			printSuccess(cmd, fmt.Sprintf("Updated %d users for schedule %s", len(ids), args[0]))
 			return nil
 		},
 	}
@@ -448,10 +420,10 @@ func newSchedulesUserCmd(state *appState) *cobra.Command {
 	return user
 }
 
-// newSchedulesUserMoveCmd implements "schedules user move --schedule <id> --user <id>".
+// newSchedulesUserMoveCmd implements "schedules user move --schedule <uuid> --user <id>".
 func newSchedulesUserMoveCmd(state *appState) *cobra.Command {
 	var (
-		scheduleID int
+		scheduleID string
 		userID     int
 	)
 
@@ -459,20 +431,20 @@ func newSchedulesUserMoveCmd(state *appState) *cobra.Command {
 		Use:   "move",
 		Short: "Move a user to a specific schedule",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if scheduleID == 0 {
+			if scheduleID == "" {
 				return fmt.Errorf("--schedule is required")
 			}
 			if userID == 0 {
 				return fmt.Errorf("--user is required")
 			}
 			if err := state.client.MoveUserToSchedule(cmd.Context(), scheduleID, userID); err != nil {
-				return fmt.Errorf("moving user %d to schedule %d: %w", userID, scheduleID, err)
+				return fmt.Errorf("moving user %d to schedule %s: %w", userID, scheduleID, err)
 			}
-			printSuccess(cmd, fmt.Sprintf("User %d moved to schedule %d", userID, scheduleID))
+			printSuccess(cmd, fmt.Sprintf("User %d moved to schedule %s", userID, scheduleID))
 			return nil
 		},
 	}
-	cmd.Flags().IntVar(&scheduleID, "schedule", 0, "Schedule ID (required)")
+	cmd.Flags().StringVar(&scheduleID, "schedule", "", "Schedule UUID (required)")
 	cmd.Flags().IntVar(&userID, "user", 0, "User ID (required)")
 	return cmd
 }
@@ -491,34 +463,24 @@ func newSchedulesUserGetCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("invalid user ID %q: must be an integer", args[0])
 			}
 
-			var s interface {
-				// Use interface to avoid duplicating call logic
+			var sched interface {
+				// placeholder
 			}
-			_ = s
+			_ = sched
 
 			switch schedType {
 			case "reporting":
-				sched, err := state.client.GetUserReportingSchedule(cmd.Context(), userID)
+				s, err := state.client.GetUserReportingSchedule(cmd.Context(), userID)
 				if err != nil {
 					return fmt.Errorf("getting reporting schedule for user %d: %w", userID, err)
 				}
-				output.KeyValue(cmd.OutOrStdout(), map[string]string{
-					"id":        strconv.Itoa(sched.ID),
-					"name":      sched.Name,
-					"type":      sched.Type,
-					"isDefault": strconv.FormatBool(sched.IsDefault),
-				})
+				output.KeyValue(cmd.OutOrStdout(), map[string]string{"id": s.ID, "name": s.Name, "type": s.Type, "isDefault": strconv.FormatBool(s.IsDefault)})
 			case "shift":
-				sched, err := state.client.GetUserShiftSchedule(cmd.Context(), userID)
+				s, err := state.client.GetUserShiftSchedule(cmd.Context(), userID)
 				if err != nil {
 					return fmt.Errorf("getting shift schedule for user %d: %w", userID, err)
 				}
-				output.KeyValue(cmd.OutOrStdout(), map[string]string{
-					"id":        strconv.Itoa(sched.ID),
-					"name":      sched.Name,
-					"type":      sched.Type,
-					"isDefault": strconv.FormatBool(sched.IsDefault),
-				})
+				output.KeyValue(cmd.OutOrStdout(), map[string]string{"id": s.ID, "name": s.Name, "type": s.Type, "isDefault": strconv.FormatBool(s.IsDefault)})
 			default:
 				return fmt.Errorf("--type must be 'reporting' or 'shift'")
 			}
