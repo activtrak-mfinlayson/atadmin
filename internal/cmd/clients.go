@@ -129,7 +129,7 @@ func newClientsUpdateCmd(state *appState) *cobra.Command {
 			if err := state.client.UpdateClientAlias(cmd.Context(), id, alias); err != nil {
 				return fmt.Errorf("updating client %d: %w", id, err)
 			}
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Updated client %d\n", id)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Updated client %d\n", id)
 			return nil
 		},
 	}
@@ -175,9 +175,9 @@ func newClientsDeleteCmd(state *appState) *cobra.Command {
 			}
 
 			if tty.IsTerminal() {
-				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Deleted %d clients\n", len(ids))
+				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Deleted %d clients\n", len(ids))
 			} else {
-				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "deleted")
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "deleted")
 			}
 			return nil
 		},
@@ -209,9 +209,9 @@ func newClientsRestoreCmd(state *appState) *cobra.Command {
 			}
 
 			if tty.IsTerminal() {
-				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Restored %d clients\n", len(ids))
+				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Restored %d clients\n", len(ids))
 			} else {
-				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "restored")
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "restored")
 			}
 			return nil
 		},
@@ -244,7 +244,7 @@ func newClientsMergeCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("merging clients %d -> %d: %w", sourceID, targetID, err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Merged client %d into %d\n", sourceID, targetID)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Merged client %d into %d\n", sourceID, targetID)
 			return nil
 		},
 	}
@@ -276,7 +276,7 @@ func newClientsMergeBulkCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("bulk merging clients: %w", err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Merged %d client pairs\n", len(records))
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Merged %d client pairs\n", len(records))
 			return nil
 		},
 	}
@@ -307,7 +307,7 @@ func newClientsUnmergeBulkCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("bulk unmerging clients: %w", err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Unmerged %d client records\n", len(records))
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Unmerged %d client records\n", len(records))
 			return nil
 		},
 	}
@@ -355,7 +355,7 @@ func newClientsAliasSetCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("setting alias for client %d: %w", clientID, err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Updated alias for client %d\n", clientID)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Updated alias for client %d\n", clientID)
 			return nil
 		},
 	}
@@ -387,7 +387,7 @@ func newClientsAliasBulkCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("bulk updating aliases: %w", err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Updated aliases for %d clients\n", len(records))
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Updated aliases for %d clients\n", len(records))
 			return nil
 		},
 	}
@@ -463,7 +463,7 @@ func newDNTAddCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("adding Do Not Track entry: %w", err)
 			}
 
-			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Do Not Track entry added")
+			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "Do Not Track entry added")
 			return nil
 		},
 	}
@@ -494,7 +494,7 @@ func newDNTRemoveCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("removing Do Not Track entries: %w", err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Removed %d Do Not Track entries\n", len(ids))
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Removed %d Do Not Track entries\n", len(ids))
 			return nil
 		},
 	}
@@ -524,7 +524,7 @@ func newDNTUpdateCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("updating Do Not Track entry %d: %w", entryID, err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Updated Do Not Track entry %d\n", entryID)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Updated Do Not Track entry %d\n", entryID)
 			return nil
 		},
 	}
@@ -557,7 +557,7 @@ func newDNTAddBulkCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("bulk adding Do Not Track entries: %w", err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Added %d Do Not Track entries\n", len(records))
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Added %d Do Not Track entries\n", len(records))
 			return nil
 		},
 	}
@@ -588,7 +588,7 @@ func newDNTRemoveBulkCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("bulk removing Do Not Track entries: %w", err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Removed %d Do Not Track entries\n", len(records))
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Removed %d Do Not Track entries\n", len(records))
 			return nil
 		},
 	}
@@ -618,7 +618,7 @@ func newDNTGlobalUserCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("marking global Do Not Track entries: %w", err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Marked %d entries as global\n", len(ids))
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Marked %d entries as global\n", len(ids))
 			return nil
 		},
 	}

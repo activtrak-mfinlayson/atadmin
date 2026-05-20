@@ -226,7 +226,7 @@ func newUsersUpdateCmd(state *appState) *cobra.Command {
 			if asJSON {
 				return output.JSON(cmd.OutOrStdout(), updated)
 			}
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Updated user %d\n", id)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Updated user %d\n", id)
 			return nil
 		},
 	}
@@ -266,12 +266,12 @@ func newUsersDeleteCmd(state *appState) *cobra.Command {
 				if !tty.IsTerminal() {
 					return fmt.Errorf("non-interactive mode: pass --yes to confirm deletion")
 				}
-				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Delete user %d? [y/N] ", id)
+				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Delete user %d? [y/N] ", id)
 				scanner := bufio.NewScanner(os.Stdin)
 				scanner.Scan()
 				answer := strings.TrimSpace(strings.ToLower(scanner.Text()))
 				if answer != "y" && answer != "yes" {
-					_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Aborted.")
+					_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "Aborted.")
 					return nil
 				}
 			}
@@ -288,7 +288,7 @@ func newUsersDeleteCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("deleting user: %w", err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Deleted user %d\n", id)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Deleted user %d\n", id)
 			return nil
 		},
 	}
@@ -361,7 +361,7 @@ func newUsersGroupsAddCmd(state *appState) *cobra.Command {
 			if _, err := state.client.AddUserGroups(cmd.Context(), userID, groupIDs, revision); err != nil {
 				return fmt.Errorf("adding groups: %w", err)
 			}
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Added group(s) to user %d\n", userID)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Added group(s) to user %d\n", userID)
 			return nil
 		},
 	}
@@ -416,7 +416,7 @@ func newUsersGroupsRemoveCmd(state *appState) *cobra.Command {
 			if _, err := state.client.RemoveUserGroups(cmd.Context(), userID, groupIDs, revision); err != nil {
 				return fmt.Errorf("removing groups: %w", err)
 			}
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Removed group(s) from user %d\n", userID)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Removed group(s) from user %d\n", userID)
 			return nil
 		},
 	}

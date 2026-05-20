@@ -215,7 +215,7 @@ func newGroupsRenameCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("renaming group %d: %w", id, err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Renamed group %d to %q\n", id, name)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Renamed group %d to %q\n", id, name)
 			return nil
 		},
 	}
@@ -246,9 +246,9 @@ func newGroupsDeleteCmd(state *appState) *cobra.Command {
 			}
 
 			if tty.IsTerminal() {
-				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Deleted %d groups\n", len(ids))
+				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Deleted %d groups\n", len(ids))
 			} else {
-				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "deleted")
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "deleted")
 			}
 			return nil
 		},
@@ -368,7 +368,7 @@ func newGroupsMembersAddCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("adding member %d to group %d: %w", memberID, groupID, err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Added member %d (%s) to group %d\n", memberID, memberType, groupID)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Added member %d (%s) to group %d\n", memberID, memberType, groupID)
 			return nil
 		},
 	}
@@ -402,7 +402,7 @@ func newGroupsMembersRemoveCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("removing member %d from group %d: %w", memberID, groupID, err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Removed member %d from group %d\n", memberID, groupID)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Removed member %d from group %d\n", memberID, groupID)
 			return nil
 		},
 	}
@@ -466,7 +466,7 @@ func newGroupsMembersImportCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("importing members: %w", err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Imported %d member records\n", len(records))
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Imported %d member records\n", len(records))
 			return nil
 		},
 	}
@@ -522,7 +522,7 @@ func newGroupsClientsAddCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("adding clients to group %d: %w", groupID, err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Added %d clients to group %d\n", len(ids), groupID)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Added %d clients to group %d\n", len(ids), groupID)
 			return nil
 		},
 	}
@@ -558,7 +558,7 @@ func newGroupsClientsRemoveCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("removing clients from group %d: %w", groupID, err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Removed %d clients from group %d\n", len(ids), groupID)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Removed %d clients from group %d\n", len(ids), groupID)
 			return nil
 		},
 	}
@@ -614,7 +614,7 @@ func newGroupsDevicesAddCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("adding devices to group %d: %w", groupID, err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Added %d devices to group %d\n", len(ids), groupID)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Added %d devices to group %d\n", len(ids), groupID)
 			return nil
 		},
 	}
@@ -650,7 +650,7 @@ func newGroupsDevicesRemoveCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("removing devices from group %d: %w", groupID, err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Removed %d devices from group %d\n", len(ids), groupID)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Removed %d devices from group %d\n", len(ids), groupID)
 			return nil
 		},
 	}
