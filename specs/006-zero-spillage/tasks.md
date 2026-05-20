@@ -24,7 +24,7 @@ description: "Task list for Feature 006: Zero-Spillage Rule"
 
 **Purpose**: Establish the complete list of non-data stdout writes across all cmd files before making changes.
 
-- [ ] T001 Audit all files in `internal/cmd/` not covered by data-model.md (agents.go, alarms.go, apikeys.go, auditlog.go, auth.go, clients.go, devices.go, hrdc.go, notifications.go, schedules.go) for any `fmt.Fprint*` calls sending non-data output to `cmd.OutOrStdout()` and document any additional sites
+- [X] T001 Audit all files in `internal/cmd/` not covered by data-model.md (agents.go, alarms.go, apikeys.go, auditlog.go, auth.go, clients.go, devices.go, hrdc.go, notifications.go, schedules.go) for any `fmt.Fprint*` calls sending non-data output to `cmd.OutOrStdout()` and document any additional sites
 
 **Checkpoint**: Audit complete — scope of reclassification confirmed (≥21 known sites + any newly found)
 
@@ -34,7 +34,12 @@ description: "Task list for Feature 006: Zero-Spillage Rule"
 
 **Purpose**: Core output utilities that US2 depends on and that US1 call-sites implicitly rely on for consistent error routing. Must be complete before wiring `Execute()`.
 
-- [ ] T002 Add `JSONError` struct, `WriteError()`, `DetectJSONMode()`, and `SuggestionFor()` functions to `internal/output/output.go` per data-model.md spec (including the suggestion-string mapping table from research.md §3)
+- [X] T002 Add `JSONError` struct, `WriteError()`, `DetectJSONMode()`, and `SuggestionFor()` functions to `internal/output/output.go` per data-model.md spec (including the suggestion-string mapping table from research.md §3)
+
+2. **Task 2b: Unit Tests for Output Helpers**
+   - **File:** `internal/output/output_test.go`
+   - **Description:** Write table-driven tests for `DetectJSONMode()` and `SuggestionFor()` covering all documented edge cases.
+   - **Acceptance:** Tests pass locally (`go test ./internal/output/...`).
 
 **Checkpoint**: `output.WriteError` and `output.DetectJSONMode` are callable — US1 and US2 implementation can now proceed in parallel
 
@@ -53,10 +58,10 @@ atadmin users update 123 --display-name "Test" 2>/dev/null
 
 ### Implementation for User Story 1
 
-- [ ] T003 [P] [US1] Reclassify 6 diagnostic messages from `cmd.OutOrStdout()` to `cmd.ErrOrStderr()` in `internal/cmd/users.go` (~lines 229 "Updated user", 269 "Delete user? [y/N]", 274 "Aborted.", 291 "Deleted user", 364 "Added group(s)", 419 "Removed group(s)")
-- [ ] T004 [P] [US1] Reclassify 10 diagnostic messages from `cmd.OutOrStdout()` to `cmd.ErrOrStderr()` in `internal/cmd/groups.go` (~lines 218 "Renamed group", 249 "Deleted N groups", 251 "deleted", 371 "Added member", 405 "Removed member", 469 "Imported N records", 525 "Added N clients", 561 "Removed N clients", 617 "Added N devices", 653 "Removed N devices")
-- [ ] T005 [P] [US1] Reclassify 5 diagnostic messages from `cmd.OutOrStdout()` to `cmd.ErrOrStderr()` in `internal/cmd/consumers.go` (~lines 134 "Created N consumers", 165 "Updated N consumers", 196 "Deleted N consumers", 198 "deleted", 230 "Deleted N consumers")
-- [ ] T006 [US1] Fix any additional stray stdout writes found during T001 audit in remaining `internal/cmd/` files
+- [X] T003 [P] [US1] Reclassify 6 diagnostic messages from `cmd.OutOrStdout()` to `cmd.ErrOrStderr()` in `internal/cmd/users.go` (~lines 229 "Updated user", 269 "Delete user? [y/N]", 274 "Aborted.", 291 "Deleted user", 364 "Added group(s)", 419 "Removed group(s)")
+- [X] T004 [P] [US1] Reclassify 10 diagnostic messages from `cmd.OutOrStdout()` to `cmd.ErrOrStderr()` in `internal/cmd/groups.go` (~lines 218 "Renamed group", 249 "Deleted N groups", 251 "deleted", 371 "Added member", 405 "Removed member", 469 "Imported N records", 525 "Added N clients", 561 "Removed N clients", 617 "Added N devices", 653 "Removed N devices")
+- [X] T005 [P] [US1] Reclassify 5 diagnostic messages from `cmd.OutOrStdout()` to `cmd.ErrOrStderr()` in `internal/cmd/consumers.go` (~lines 134 "Created N consumers", 165 "Updated N consumers", 196 "Deleted N consumers", 198 "deleted", 230 "Deleted N consumers")
+- [X] T006 [US1] Fix any additional stray stdout writes found during T001 audit in remaining `internal/cmd/` files
 
 **Checkpoint**: All mutation commands write zero non-data output to stdout; stderr carries all confirmations
 
@@ -76,7 +81,7 @@ echo "$result" | jq -e '.suggestion'  # must be non-empty for auth errors
 
 ### Implementation for User Story 2
 
-- [ ] T007 [US2] Modify `Execute()` in `internal/cmd/root.go` to detect JSON mode with `output.DetectJSONMode(os.Args[1:])` before calling `root.Execute()`, then route errors through `output.WriteError()` targeting stdout when `asJSON` is true — replacing the current plain `fmt.Fprintf(root.ErrOrStderr(), ...)` call per data-model.md §Modified Call-site
+- [X] T007 [US2] Modify `Execute()` in `internal/cmd/root.go` to detect JSON mode with `output.DetectJSONMode(os.Args[1:])` before calling `root.Execute()`, then route errors through `output.WriteError()` targeting stdout when `asJSON` is true — replacing the current plain `fmt.Fprintf(root.ErrOrStderr(), ...)` call per data-model.md §Modified Call-site
 
 **Checkpoint**: `atadmin <any-cmd> --json` with a bad token outputs a valid JSON error object; non-JSON mode is unchanged
 
@@ -86,8 +91,8 @@ echo "$result" | jq -e '.suggestion'  # must be non-empty for auth errors
 
 **Purpose**: Verify correctness across both stories and validate the quickstart.md acceptance criteria.
 
-- [ ] T008 [P] Run `go test ./...` and confirm all existing tests pass with no regressions from the stdout→stderr reclassification
-- [ ] T009 [P] Manually verify all four quickstart.md scenarios: (1) read command stdout purity, (2) mutation command stdout purity, (3) structured error in JSON mode, (4) non-JSON mode unchanged
+- [X] T008 [P] Run `go test ./...` and confirm all existing tests pass with no regressions from the stdout→stderr reclassification
+- [X] T009 [P] Manually verify all four quickstart.md scenarios: (1) read command stdout purity, (2) mutation command stdout purity, (3) structured error in JSON mode, (4) non-JSON mode unchanged
 
 ---
 

@@ -134,9 +134,9 @@ func newDevicesDeleteCmd(state *appState) *cobra.Command {
 			}
 
 			if tty.IsTerminal() {
-				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Deleted %d devices\n", len(ids))
+				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Deleted %d devices\n", len(ids))
 			} else {
-				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "deleted")
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "deleted")
 			}
 			return nil
 		},
@@ -168,9 +168,9 @@ func newDevicesRestoreCmd(state *appState) *cobra.Command {
 			}
 
 			if tty.IsTerminal() {
-				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Restored %d devices\n", len(ids))
+				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Restored %d devices\n", len(ids))
 			} else {
-				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "restored")
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "restored")
 			}
 			return nil
 		},
@@ -202,9 +202,9 @@ func newDevicesUninstallCmd(state *appState) *cobra.Command {
 			}
 
 			if tty.IsTerminal() {
-				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Uninstall requested for %d devices\n", len(ids))
+				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Uninstall requested for %d devices\n", len(ids))
 			} else {
-				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "uninstall requested")
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "uninstall requested")
 			}
 			return nil
 		},
