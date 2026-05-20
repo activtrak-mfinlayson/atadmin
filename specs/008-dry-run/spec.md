@@ -8,7 +8,7 @@ For agents operating in human-in-the-loop modes ("Ask before executing"), they n
 
 ## 3. Requirements (The "What")
 1. **Dry Run Flag**: Add a `--dry-run` boolean flag to mutating commands (`create`, `update`, `delete`, `bulk`).
-    - *Decision:* When true, the API client will *skip* making the actual HTTP `POST/PUT/DELETE` request.
+    - *Decision:* When true, the API client will *skip* making the actual HTTP `POST/PUT/PATCH/DELETE` request.
 2. **Output Format**: Instead of executing, the command will print a JSON representation of the intended action.
     - *Decision:* The output will match the structure: `{"action": "update", "target": "users/123", "payload": {...}}` to make it easily parseable by agents.
 

@@ -3,7 +3,14 @@
 // without triggering the real PersistentPreRunE config/API setup.
 package cmd
 
-import "github.com/spf13/cobra"
+import (
+	"io"
+
+	"github.com/spf13/cobra"
+
+	"github.com/activtrak-mfinlayson/atadmin/internal/api"
+	"github.com/activtrak-mfinlayson/atadmin/internal/config"
+)
 
 // NewTestClientsRoot returns a minimal *cobra.Command that has only the
 // "clients" subtree attached, with no PersistentPreRunE so tests never
@@ -20,5 +27,23 @@ func NewTestClientsRoot() *cobra.Command {
 		},
 	}
 	root.AddCommand(newClientsCmd(state))
+	return root
+}
+
+// NewTestRootWithDryRun returns a minimal root command with a pre-configured
+// api.Client (DryRun=true, Out=dryRunOut) and only the "groups" subtree
+// attached. No PersistentPreRunE — tests never need a config file or token.
+func NewTestRootWithDryRun(dryRunOut io.Writer) *cobra.Command {
+	client, _ := api.NewClient("http://fake.invalid", "tok", "0.1.0", false, nil, true, dryRunOut)
+	state := &appState{
+		client: client,
+		cfg:    &config.Config{Format: "table"},
+	}
+	root := &cobra.Command{
+		Use:           "atadmin",
+		SilenceErrors: true,
+		SilenceUsage:  true,
+	}
+	root.AddCommand(newGroupsCmd(state))
 	return root
 }

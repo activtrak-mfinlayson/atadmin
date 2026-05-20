@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"math"
@@ -9,11 +10,20 @@ import (
 	"time"
 )
 
+// DryRunOutput is written to stdout (one JSON line) when --dry-run intercepts a mutating request.
+type DryRunOutput struct {
+	Action  string          `json:"action"`
+	Target  string          `json:"target"`
+	Payload json.RawMessage `json:"payload"`
+}
+
 // Client is the atadmin HTTP API client.
 type Client struct {
 	BaseURL    *url.URL
 	HTTPClient *http.Client
 	UserAgent  string
+	DryRun     bool      // when true, mutating requests are short-circuited
+	Out        io.Writer // destination for dry-run JSON output
 }
 
 // authRoundTripper injects a Bearer token into every outbound request.
@@ -72,7 +82,7 @@ func (v *verboseRoundTripper) RoundTrip(req *http.Request) (*http.Response, erro
 
 // NewClient constructs a Client with auth injection, retry-on-429, and optional
 // verbose logging to stderr.
-func NewClient(baseURL, token, version string, verbose bool, verboseOut io.Writer) (*Client, error) {
+func NewClient(baseURL, token, version string, verbose bool, verboseOut io.Writer, dryRun bool, out io.Writer) (*Client, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, fmt.Errorf("parsing base URL %q: %w", baseURL, err)
@@ -83,8 +93,10 @@ func NewClient(baseURL, token, version string, verbose bool, verboseOut io.Write
 	verbose_ := &verboseRoundTripper{inner: retry, out: verboseOut, enabled: verbose}
 
 	return &Client{
-		BaseURL:  u,
+		BaseURL:    u,
 		HTTPClient: &http.Client{Transport: verbose_},
-		UserAgent: "atadmin/" + version,
+		UserAgent:  "atadmin/" + version,
+		DryRun:     dryRun,
+		Out:        out,
 	}, nil
 }

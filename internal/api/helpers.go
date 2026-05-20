@@ -8,7 +8,29 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 )
+
+func isMutatingMethod(method string) bool {
+	switch strings.ToUpper(method) {
+	case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
+		return true
+	}
+	return false
+}
+
+func httpMethodToAction(method string) string {
+	switch strings.ToUpper(method) {
+	case http.MethodPost:
+		return "create"
+	case http.MethodPut, http.MethodPatch:
+		return "update"
+	case http.MethodDelete:
+		return "delete"
+	default:
+		return strings.ToLower(method)
+	}
+}
 
 // doRequest constructs and executes an HTTP request against the client's BaseURL.
 // If body is non-nil it is marshalled to JSON and sent as the request body with
@@ -39,6 +61,25 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body any) (
 		req.Header.Set("Content-Type", "application/json")
 	}
 	req.Header.Set("User-Agent", c.UserAgent)
+
+	if c.DryRun && isMutatingMethod(method) {
+		var rawPayload json.RawMessage
+		if body != nil {
+			rawPayload, _ = json.Marshal(body)
+		} else {
+			rawPayload = json.RawMessage("null")
+		}
+		out := DryRunOutput{
+			Action:  httpMethodToAction(method),
+			Target:  path,
+			Payload: rawPayload,
+		}
+		_ = json.NewEncoder(c.Out).Encode(out)
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(bytes.NewReader(nil)),
+		}, nil
+	}
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
