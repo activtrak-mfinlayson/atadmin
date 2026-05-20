@@ -12,6 +12,7 @@ import (
 
 	"github.com/activtrak-mfinlayson/atadmin/internal/bulk"
 	"github.com/activtrak-mfinlayson/atadmin/internal/output"
+	"github.com/activtrak-mfinlayson/atadmin/internal/stdin"
 	"github.com/activtrak-mfinlayson/atadmin/internal/tty"
 )
 
@@ -127,19 +128,38 @@ func newConsumersGetCmd(state *appState) *cobra.Command {
 
 // newConsumersCreateCmd implements "consumers create --file <path>".
 func newConsumersCreateCmd(state *appState) *cobra.Command {
-	var filePath string
+	var (
+		filePath  string
+		fromStdin bool
+	)
 
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create consumers from a JSON or CSV file",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if filePath == "" {
-				return fmt.Errorf("--file is required")
+			if filePath != "" && fromStdin {
+				return fmt.Errorf("--from-stdin: --file and --from-stdin are mutually exclusive")
 			}
 
-			records, err := bulk.ParseFile(filePath)
-			if err != nil {
-				return fmt.Errorf("reading file %q: %w", filePath, err)
+			var records []map[string]any
+			var err error
+
+			if fromStdin {
+				if err := stdin.EnsurePiped(); err != nil {
+					return err
+				}
+				records, err = stdin.ReadRecords(os.Stdin)
+				if err != nil {
+					return err
+				}
+			} else {
+				if filePath == "" {
+					return fmt.Errorf("--file is required")
+				}
+				records, err = bulk.ParseFile(filePath)
+				if err != nil {
+					return fmt.Errorf("reading file %q: %w", filePath, err)
+				}
 			}
 
 			if err := state.client.CreateConsumers(cmd.Context(), records); err != nil {
@@ -151,26 +171,46 @@ func newConsumersCreateCmd(state *appState) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON or CSV file (required)")
+	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON or CSV file")
+	cmd.Flags().BoolVar(&fromStdin, "from-stdin", false, "Read JSON array from stdin instead of --file")
 
 	return cmd
 }
 
 // newConsumersUpdateCmd implements "consumers update --file <path>".
 func newConsumersUpdateCmd(state *appState) *cobra.Command {
-	var filePath string
+	var (
+		filePath  string
+		fromStdin bool
+	)
 
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Update consumers from a JSON or CSV file",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if filePath == "" {
-				return fmt.Errorf("--file is required")
+			if filePath != "" && fromStdin {
+				return fmt.Errorf("--from-stdin: --file and --from-stdin are mutually exclusive")
 			}
 
-			records, err := bulk.ParseFile(filePath)
-			if err != nil {
-				return fmt.Errorf("reading file %q: %w", filePath, err)
+			var records []map[string]any
+			var err error
+
+			if fromStdin {
+				if err := stdin.EnsurePiped(); err != nil {
+					return err
+				}
+				records, err = stdin.ReadRecords(os.Stdin)
+				if err != nil {
+					return err
+				}
+			} else {
+				if filePath == "" {
+					return fmt.Errorf("--file is required")
+				}
+				records, err = bulk.ParseFile(filePath)
+				if err != nil {
+					return fmt.Errorf("reading file %q: %w", filePath, err)
+				}
 			}
 
 			if err := state.client.PatchConsumers(cmd.Context(), records); err != nil {
@@ -182,7 +222,8 @@ func newConsumersUpdateCmd(state *appState) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON or CSV file (required)")
+	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON or CSV file")
+	cmd.Flags().BoolVar(&fromStdin, "from-stdin", false, "Read JSON array from stdin instead of --file")
 
 	return cmd
 }
@@ -223,19 +264,38 @@ func newConsumersDeleteCmd(state *appState) *cobra.Command {
 
 // newConsumersDeleteBulkCmd implements "consumers delete-bulk --file <path>".
 func newConsumersDeleteBulkCmd(state *appState) *cobra.Command {
-	var filePath string
+	var (
+		filePath  string
+		fromStdin bool
+	)
 
 	cmd := &cobra.Command{
 		Use:   "delete-bulk",
 		Short: "Delete consumers in bulk from a JSON or CSV file",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if filePath == "" {
-				return fmt.Errorf("--file is required")
+			if filePath != "" && fromStdin {
+				return fmt.Errorf("--from-stdin: --file and --from-stdin are mutually exclusive")
 			}
 
-			records, err := bulk.ParseFile(filePath)
-			if err != nil {
-				return fmt.Errorf("reading file %q: %w", filePath, err)
+			var records []map[string]any
+			var err error
+
+			if fromStdin {
+				if err := stdin.EnsurePiped(); err != nil {
+					return err
+				}
+				records, err = stdin.ReadRecords(os.Stdin)
+				if err != nil {
+					return err
+				}
+			} else {
+				if filePath == "" {
+					return fmt.Errorf("--file is required")
+				}
+				records, err = bulk.ParseFile(filePath)
+				if err != nil {
+					return fmt.Errorf("reading file %q: %w", filePath, err)
+				}
 			}
 
 			if err := state.client.DeleteConsumersBulk(cmd.Context(), records); err != nil {
@@ -247,7 +307,8 @@ func newConsumersDeleteBulkCmd(state *appState) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON or CSV file (required)")
+	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON or CSV file")
+	cmd.Flags().BoolVar(&fromStdin, "from-stdin", false, "Read JSON array from stdin instead of --file")
 
 	return cmd
 }
@@ -313,10 +374,16 @@ func newConsumersPasswordCmd(state *appState) *cobra.Command {
 	return pw
 }
 
+type passwordStdinPayload struct {
+	Password string `json:"password"`
+}
+
 // newConsumersPasswordSetCmd implements "consumers password set <id>".
-// Prompts for masked input in interactive mode; rejects non-TTY invocations.
+// Prompts for masked input in interactive mode; rejects non-TTY invocations unless --from-stdin is set.
 func newConsumersPasswordSetCmd(state *appState) *cobra.Command {
-	return &cobra.Command{
+	var fromStdin bool
+
+	cmd := &cobra.Command{
 		Use:   "set <id>",
 		Short: "Set the password for a consumer (interactive prompt)",
 		Args:  cobra.ExactArgs(1),
@@ -326,19 +393,35 @@ func newConsumersPasswordSetCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("invalid consumer ID %q: must be an integer", args[0])
 			}
 
-			if !tty.IsTerminal() {
-				return fmt.Errorf("password prompt requires interactive terminal")
-			}
+			var password string
 
-			_, _ = fmt.Fprint(cmd.ErrOrStderr(), "New password: ")
-			password, err := readPassword(os.Stdin)
-			if err != nil {
-				return fmt.Errorf("reading password: %w", err)
-			}
-			_, _ = fmt.Fprintln(cmd.ErrOrStderr())
+			if fromStdin {
+				if err := stdin.EnsurePiped(); err != nil {
+					return err
+				}
+				payload, err := stdin.ReadJSON[passwordStdinPayload](os.Stdin)
+				if err != nil {
+					return err
+				}
+				if payload.Password == "" {
+					return fmt.Errorf("--from-stdin: \"password\" field is required")
+				}
+				password = payload.Password
+			} else {
+				if !tty.IsTerminal() {
+					return fmt.Errorf("password prompt requires interactive terminal")
+				}
 
-			if password == "" {
-				return fmt.Errorf("password must not be empty")
+				_, _ = fmt.Fprint(cmd.ErrOrStderr(), "New password: ")
+				password, err = readPassword(os.Stdin)
+				if err != nil {
+					return fmt.Errorf("reading password: %w", err)
+				}
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr())
+
+				if password == "" {
+					return fmt.Errorf("password must not be empty")
+				}
 			}
 
 			if err := state.client.SetConsumerPassword(cmd.Context(), id, password); err != nil {
@@ -349,6 +432,9 @@ func newConsumersPasswordSetCmd(state *appState) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&fromStdin, "from-stdin", false, "Read password as JSON {\"password\":\"...\"} from stdin")
+	return cmd
 }
 
 // readPassword reads a masked password from f. When f is a real terminal it
@@ -486,19 +572,38 @@ func newConsumersChromeUsersCmd(state *appState) *cobra.Command {
 
 // newConsumersChromeUsersImportCmd implements "consumers chrome-users import --file <path>".
 func newConsumersChromeUsersImportCmd(state *appState) *cobra.Command {
-	var filePath string
+	var (
+		filePath  string
+		fromStdin bool
+	)
 
 	cmd := &cobra.Command{
 		Use:   "import",
 		Short: "Import Chrome users in bulk from a JSON or CSV file",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if filePath == "" {
-				return fmt.Errorf("--file is required")
+			if filePath != "" && fromStdin {
+				return fmt.Errorf("--from-stdin: --file and --from-stdin are mutually exclusive")
 			}
 
-			records, err := bulk.ParseFile(filePath)
-			if err != nil {
-				return fmt.Errorf("reading file %q: %w", filePath, err)
+			var records []map[string]any
+			var err error
+
+			if fromStdin {
+				if err := stdin.EnsurePiped(); err != nil {
+					return err
+				}
+				records, err = stdin.ReadRecords(os.Stdin)
+				if err != nil {
+					return err
+				}
+			} else {
+				if filePath == "" {
+					return fmt.Errorf("--file is required")
+				}
+				records, err = bulk.ParseFile(filePath)
+				if err != nil {
+					return fmt.Errorf("reading file %q: %w", filePath, err)
+				}
 			}
 
 			if err := state.client.CreateChromeUsersBulk(cmd.Context(), records); err != nil {
@@ -510,7 +615,8 @@ func newConsumersChromeUsersImportCmd(state *appState) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON or CSV file (required)")
+	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON or CSV file")
+	cmd.Flags().BoolVar(&fromStdin, "from-stdin", false, "Read JSON array from stdin instead of --file")
 
 	return cmd
 }

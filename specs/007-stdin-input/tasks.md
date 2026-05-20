@@ -17,7 +17,12 @@
 
 **Purpose**: Create the new transport package that all command groups depend on
 
-- [ ] T001 Create `internal/stdin/stdin.go`: implement `ReadJSON[T any](r io.Reader) (T, error)` and `ReadRecords(r io.Reader) ([]map[string]any, error)` per `specs/007-stdin-input/data-model.md`; error messages must match contract: `--from-stdin: stdin is empty; pipe a JSON payload`, `--from-stdin: invalid JSON: <err>`, `--from-stdin: reading stdin: <err>`
+- [X] T001 Create `internal/stdin/stdin.go`: implement `ReadJSON[T any](r io.Reader) (T, error)` and `ReadRecords(r io.Reader) ([]map[string]any, error)` per `specs/007-stdin-input/data-model.md`; error messages must match contract: `--from-stdin: stdin is empty; pipe a JSON payload`, `--from-stdin: invalid JSON: <err>`, `--from-stdin: reading stdin: <err>`
+
+2. **Task 1b: TTY Hang Guard**
+   - **File:** `internal/stdin/stdin.go`
+   - **Description:** Implement a TTY check using `golang.org/x/term`. If `term.IsTerminal(int(os.Stdin.Fd()))` is true, immediately return an error (e.g., "Error: --from-stdin requires data to be piped to the command") to prevent the CLI from hanging silently waiting for interactive input.
+   - **Acceptance:** CLI fails fast if no pipe is detected.
 
 ---
 
@@ -27,7 +32,7 @@
 
 **⚠️ CRITICAL**: No command work can begin until T001 is complete and T002 passes
 
-- [ ] T002 Create `internal/stdin/stdin_test.go`: table-driven tests for `ReadJSON` and `ReadRecords` covering empty reader (expect error), invalid JSON syntax (expect error), valid JSON object (expect typed struct), valid JSON array (expect `[]map[string]any`), and `io.Reader` read error
+- [X] T002 Create `internal/stdin/stdin_test.go`: table-driven tests for `ReadJSON` and `ReadRecords` covering empty reader (expect error), invalid JSON syntax (expect error), valid JSON object (expect typed struct), valid JSON array (expect `[]map[string]any`), and `io.Reader` read error
 
 **Checkpoint**: `go test ./internal/stdin/...` passes — command implementation can now begin in parallel
 
@@ -39,13 +44,13 @@
 
 **Independent Test**: `echo '[{"sourceId":1,"targetId":2}]' | atadmin clients merge-bulk --from-stdin` runs successfully; `atadmin clients merge-bulk --file f.json --from-stdin` returns `Error: --file and --from-stdin are mutually exclusive`
 
-- [ ] T003 [P] [US1] Add `--from-stdin` bool flag to `clients merge-bulk`, `clients unmerge-bulk`, `clients alias-bulk`, `clients donottrack add-bulk`, `clients donottrack remove-bulk` in `internal/cmd/clients.go`; call `stdin.ReadRecords(os.Stdin)` when set; return error if `--file` is also set
-- [ ] T004 [P] [US1] Add `--from-stdin` bool flag to `consumers delete-bulk`, `consumers chrome-users import`, `consumers create`, `consumers update` in `internal/cmd/consumers.go`; call `stdin.ReadRecords(os.Stdin)` when set; return error if `--file` is also set
-- [ ] T005 [P] [US1] Add `--from-stdin` bool flag to `groups members import` in `internal/cmd/groups.go`; call `stdin.ReadRecords(os.Stdin)` when set; return error if `--file` is also set
-- [ ] T006 [P] [US1] Add `--from-stdin` bool flag to `hrdc import` in `internal/cmd/hrdc.go`; call `stdin.ReadRecords(os.Stdin)` when set; return error if `--file` is also set
-- [ ] T007 [P] [US1] Add `--from-stdin` bool flag to `schedules create` in `internal/cmd/schedules.go`; call `stdin.ReadRecords(os.Stdin)` when set; return error if `--file` is also set
-- [ ] T008 [P] [US1] Add `--from-stdin` bool flag to `signals create` and `signals update` in `internal/cmd/signals.go`; call `stdin.ReadRecords(os.Stdin)` when set; return error if `--file` is also set
-- [ ] T009 [P] [US1] Add `--from-stdin` bool flag to `alarms create` and `alarms update` in `internal/cmd/alarms.go`; call `stdin.ReadRecords(os.Stdin)` when set; return error if `--file` is also set
+- [X] T003 [P] [US1] Add `--from-stdin` bool flag to `clients merge-bulk`, `clients unmerge-bulk`, `clients alias-bulk`, `clients donottrack add-bulk`, `clients donottrack remove-bulk` in `internal/cmd/clients.go`; call `stdin.ReadRecords(os.Stdin)` when set; return error if `--file` is also set
+- [X] T004 [P] [US1] Add `--from-stdin` bool flag to `consumers delete-bulk`, `consumers chrome-users import`, `consumers create`, `consumers update` in `internal/cmd/consumers.go`; call `stdin.ReadRecords(os.Stdin)` when set; return error if `--file` is also set
+- [X] T005 [P] [US1] Add `--from-stdin` bool flag to `groups members import` in `internal/cmd/groups.go`; call `stdin.ReadRecords(os.Stdin)` when set; return error if `--file` is also set
+- [X] T006 [P] [US1] Add `--from-stdin` bool flag to `hrdc import` in `internal/cmd/hrdc.go`; call `stdin.ReadRecords(os.Stdin)` when set; return error if `--file` is also set
+- [X] T007 [P] [US1] Add `--from-stdin` bool flag to `schedules create` in `internal/cmd/schedules.go`; call `stdin.ReadJSON[map[string]any](os.Stdin)` when set (API takes map[string]any, not array); return error if `--file` is also set
+- [X] T008 [P] [US1] Add `--from-stdin` bool flag to `signals create` and `signals update` in `internal/cmd/signals.go`; call `stdin.ReadJSON[map[string]any](os.Stdin)` when set (API takes map[string]any); return error if `--file` is also set
+- [X] T009 [P] [US1] Add `--from-stdin` bool flag to `alarms create` and `alarms update` in `internal/cmd/alarms.go`; call `stdin.ReadJSON[map[string]any](os.Stdin)` when set (API takes map[string]any); return error if `--file` is also set
 
 **Checkpoint**: All Group A commands accept `--from-stdin`; mutual-exclusivity error works; `go test ./...` passes
 
@@ -57,8 +62,8 @@
 
 **Independent Test**: `echo '{"displayName":"Jane"}' | atadmin users update 123 --from-stdin` patches only `displayName`; `echo '{"actions":["StartTracking"],"data":[{"entityId":1,"revision":1}]}' | atadmin users bulk start-tracking --from-stdin` executes; wrong `actions` value returns a validation error
 
-- [ ] T010 [US2] Add `--from-stdin` bool flag to `users update` in `internal/cmd/users.go`; when set, call `stdin.ReadJSON[api.UpdateUserRequest](os.Stdin)` as the sole payload source; skip per-flag "at least one field required" validation; ignore individual field flags (`--display-name`, `--tracked`, etc.)
-- [ ] T011 [US2] Add `--from-stdin` bool flag to `users bulk start-tracking`, `users bulk stop-tracking`, `users bulk delete-entity`, `users bulk delete-data` in `internal/cmd/users.go`; when set, call `stdin.ReadJSON[api.BulkActionRequest](os.Stdin)`; validate that `req.Actions[0]` matches the subcommand's expected action string (e.g. `"StartTracking"`), returning `--from-stdin: actions mismatch: expected [StartTracking]` on failure
+- [X] T010 [US2] Add `--from-stdin` bool flag to `users update` in `internal/cmd/users.go`; when set, call `stdin.ReadJSON[api.UpdateUserRequest](os.Stdin)` as the sole payload source; skip per-flag "at least one field required" validation; ignore individual field flags (`--display-name`, `--tracked`, etc.)
+- [X] T011 [US2] Add `--from-stdin` bool flag to `users bulk start-tracking`, `users bulk stop-tracking`, `users bulk delete-entity`, `users bulk delete-data` in `internal/cmd/users.go`; when set, call `stdin.ReadJSON[api.BulkActionRequest](os.Stdin)`; validate that `req.Actions[0]` matches the subcommand's expected action string (e.g. `"StartTracking"`), returning `--from-stdin: actions mismatch: expected [StartTracking]` on failure. MUST add post-unmarshal validation to ensure the JSON payload is not empty.
 
 **Checkpoint**: All Group B commands accept `--from-stdin`; individual flags ignored when `--from-stdin` set; action validation works; `go test ./...` passes
 
@@ -70,8 +75,8 @@
 
 **Independent Test**: `echo '' | atadmin users delete 123 --from-stdin` deletes without prompting; `echo '{"password":"s3cr3t"}' | atadmin consumers password set 456 --from-stdin` sets the password without interactive input; empty `password` field returns `Error: --from-stdin: "password" field is required`
 
-- [ ] T012 [P] [US3] Add `--from-stdin` bool flag to `users delete` in `internal/cmd/users.go`; when set, assign `skipConfirmation = true` to skip the `tty.IsTerminal()` scanner prompt; do not read any data from stdin
-- [ ] T013 [P] [US3] Add `--from-stdin` bool flag to `consumers password set` in `internal/cmd/consumers.go`; define unexported `passwordStdinPayload` struct (`Password string \`json:"password"\``); when set, call `stdin.ReadJSON[passwordStdinPayload](os.Stdin)`, validate `payload.Password != ""` (error: `--from-stdin: "password" field is required`), bypass `readPassword` call
+- [X] T012 [P] [US3] Add `--from-stdin` bool flag to `users delete` in `internal/cmd/users.go`; when set, assign `skipConfirmation = true` to skip the `tty.IsTerminal()` scanner prompt; do not read any data from stdin
+- [X] T013 [P] [US3] Add `--from-stdin` bool flag to `consumers password set` in `internal/cmd/consumers.go`; define unexported `passwordStdinPayload` struct (`Password string \`json:"password"\``); when set, call `stdin.ReadJSON[passwordStdinPayload](os.Stdin)`, validate `payload.Password != ""` (error: `--from-stdin: "password" field is required`), bypass `readPassword` call
 
 **Checkpoint**: Both Group C commands bypass interactive prompts when `--from-stdin` is set; empty password validation works; `go test ./...` passes
 
@@ -81,9 +86,14 @@
 
 **Purpose**: Build verification, error message consistency across all modified files
 
-- [ ] T014 [P] Audit all `--from-stdin` error messages in `internal/cmd/clients.go`, `internal/cmd/consumers.go`, `internal/cmd/groups.go`, `internal/cmd/hrdc.go`, `internal/cmd/schedules.go`, `internal/cmd/signals.go`, `internal/cmd/alarms.go`, `internal/cmd/users.go`; confirm every error starts with `--from-stdin:` per `specs/007-stdin-input/contracts/stdin-payloads.md`
-- [ ] T015 [P] Run `go build -o bin/atadmin ./cmd/atadmin` and fix any compilation errors
-- [ ] T016 Run `go test ./...` and confirm all tests pass with no regressions
+- [X] T014 [P] Audit all `--from-stdin` error messages in `internal/cmd/clients.go`, `internal/cmd/consumers.go`, `internal/cmd/groups.go`, `internal/cmd/hrdc.go`, `internal/cmd/schedules.go`, `internal/cmd/signals.go`, `internal/cmd/alarms.go`, `internal/cmd/users.go`; confirm every error starts with `--from-stdin:` per `specs/007-stdin-input/contracts/stdin-payloads.md`
+- [X] T015 [P] Run `go build -o bin/atadmin ./cmd/atadmin` and fix any compilation errors
+- [X] T016 Run `go test ./...` and confirm all tests pass with no regressions
+
+17. **Task 16b: Command-level Cobra Tests**
+   - **File:** `internal/cmd/*_test.go`
+   - **Description:** Add integration tests for Cobra commands asserting that the `--from-stdin` flag successfully skips interactive prompts and routes data correctly to the mocked API.
+   - **Acceptance:** Tests verify end-to-end command execution.
 
 ---
 

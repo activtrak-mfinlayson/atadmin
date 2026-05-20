@@ -11,6 +11,7 @@ import (
 
 	"github.com/activtrak-mfinlayson/atadmin/internal/api"
 	"github.com/activtrak-mfinlayson/atadmin/internal/output"
+	"github.com/activtrak-mfinlayson/atadmin/internal/stdin"
 	"github.com/activtrak-mfinlayson/atadmin/internal/tty"
 )
 
@@ -187,6 +188,7 @@ func newUsersUpdateCmd(state *appState) *cobra.Command {
 		tracked     string // "true" or "false" — using string to detect when flag is set
 		revision    int64
 		asJSON      bool
+		fromStdin   bool
 	)
 
 	cmd := &cobra.Command{
@@ -199,33 +201,42 @@ func newUsersUpdateCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("invalid id %q: %w", args[0], err)
 			}
 
-			req := api.UpdateUserRequest{}
-			flagCount := 0
+			var req api.UpdateUserRequest
 
-			if cmd.Flags().Changed("display-name") {
-				req.DisplayName = &displayName
-				flagCount++
-			}
-			if cmd.Flags().Changed("first-name") {
-				req.FirstName = &firstName
-				flagCount++
-			}
-			if cmd.Flags().Changed("last-name") {
-				req.LastName = &lastName
-				flagCount++
-			}
-			if cmd.Flags().Changed("timezone") {
-				req.Timezone = &timezone
-				flagCount++
-			}
-			if cmd.Flags().Changed("tracked") {
-				t := tracked == "true"
-				req.Tracked = &t
-				flagCount++
-			}
-
-			if flagCount == 0 {
-				return fmt.Errorf("at least one of --display-name, --first-name, --last-name, --timezone, --tracked must be provided")
+			if fromStdin {
+				if err := stdin.EnsurePiped(); err != nil {
+					return err
+				}
+				req, err = stdin.ReadJSON[api.UpdateUserRequest](os.Stdin)
+				if err != nil {
+					return err
+				}
+			} else {
+				flagCount := 0
+				if cmd.Flags().Changed("display-name") {
+					req.DisplayName = &displayName
+					flagCount++
+				}
+				if cmd.Flags().Changed("first-name") {
+					req.FirstName = &firstName
+					flagCount++
+				}
+				if cmd.Flags().Changed("last-name") {
+					req.LastName = &lastName
+					flagCount++
+				}
+				if cmd.Flags().Changed("timezone") {
+					req.Timezone = &timezone
+					flagCount++
+				}
+				if cmd.Flags().Changed("tracked") {
+					t := tracked == "true"
+					req.Tracked = &t
+					flagCount++
+				}
+				if flagCount == 0 {
+					return fmt.Errorf("at least one of --display-name, --first-name, --last-name, --timezone, --tracked must be provided")
+				}
 			}
 
 			if revision == 0 {
@@ -256,6 +267,7 @@ func newUsersUpdateCmd(state *appState) *cobra.Command {
 	cmd.Flags().StringVar(&tracked, "tracked", "", "Set tracking state: true or false")
 	cmd.Flags().Int64Var(&revision, "revision", 0, "Explicit revision (skips auto-fetch)")
 	cmd.Flags().BoolVar(&asJSON, "json", false, "Output updated entity as JSON")
+	cmd.Flags().BoolVar(&fromStdin, "from-stdin", false, "Read JSON payload from stdin (replaces individual field flags)")
 
 	return cmd
 }
@@ -266,8 +278,9 @@ func newUsersUpdateCmd(state *appState) *cobra.Command {
 
 func newUsersDeleteCmd(state *appState) *cobra.Command {
 	var (
-		revision int64
-		yes      bool
+		revision  int64
+		yes       bool
+		fromStdin bool
 	)
 
 	cmd := &cobra.Command{
@@ -280,7 +293,9 @@ func newUsersDeleteCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("invalid id %q: %w", args[0], err)
 			}
 
-			if !yes {
+			skipConfirmation := yes || fromStdin
+
+			if !skipConfirmation {
 				if !tty.IsTerminal() {
 					return fmt.Errorf("non-interactive mode: pass --yes to confirm deletion")
 				}
@@ -313,6 +328,7 @@ func newUsersDeleteCmd(state *appState) *cobra.Command {
 
 	cmd.Flags().Int64Var(&revision, "revision", 0, "Explicit revision (skips auto-fetch)")
 	cmd.Flags().BoolVar(&yes, "yes", false, "Skip confirmation prompt")
+	cmd.Flags().BoolVar(&fromStdin, "from-stdin", false, "Skip confirmation prompt (no data read from stdin)")
 
 	return cmd
 }
@@ -475,60 +491,81 @@ func newUsersBulkCmd(state *appState) *cobra.Command {
 
 func newBulkActionCmd(state *appState, use, short, apiAction string) *cobra.Command {
 	var (
-		idsFlag string
-		asJSON  bool
+		idsFlag   string
+		asJSON    bool
+		fromStdin bool
 	)
 
 	cmd := &cobra.Command{
 		Use:   use,
 		Short: short,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if idsFlag == "" {
-				return fmt.Errorf("--ids is required")
-			}
+			var req api.BulkActionRequest
 
-			parts := strings.Split(idsFlag, ",")
-			ids := make([]int64, 0, len(parts))
-			for _, p := range parts {
-				p = strings.TrimSpace(p)
-				if p == "" {
-					continue
+			if fromStdin {
+				if err := stdin.EnsurePiped(); err != nil {
+					return err
 				}
-				id, err := strconv.ParseInt(p, 10, 64)
+				var err error
+				req, err = stdin.ReadJSON[api.BulkActionRequest](os.Stdin)
 				if err != nil {
-					return fmt.Errorf("invalid id %q: %w", p, err)
+					return err
 				}
-				ids = append(ids, id)
-			}
-			if len(ids) == 0 {
-				return fmt.Errorf("--ids must contain at least one entity ID")
-			}
-
-			revisions, errs := state.client.FetchRevisions(cmd.Context(), ids, 10)
-			for _, e := range errs {
-				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: %v\n", e)
-			}
-
-			data := make([]api.BulkEntityData, 0, len(revisions))
-			for _, id := range ids {
-				rev, ok := revisions[id]
-				if !ok {
-					continue
+				if len(req.Actions) == 0 || len(req.Data) == 0 {
+					return fmt.Errorf("--from-stdin: payload must include non-empty \"actions\" and \"data\" fields")
 				}
-				data = append(data, api.BulkEntityData{
-					EntityID: int(id),
-					Revision: int(rev),
-				})
+				if req.Actions[0] != apiAction {
+					return fmt.Errorf("--from-stdin: actions mismatch: expected [%s]", apiAction)
+				}
+			} else {
+				if idsFlag == "" {
+					return fmt.Errorf("--ids is required")
+				}
+
+				parts := strings.Split(idsFlag, ",")
+				ids := make([]int64, 0, len(parts))
+				for _, p := range parts {
+					p = strings.TrimSpace(p)
+					if p == "" {
+						continue
+					}
+					id, err := strconv.ParseInt(p, 10, 64)
+					if err != nil {
+						return fmt.Errorf("invalid id %q: %w", p, err)
+					}
+					ids = append(ids, id)
+				}
+				if len(ids) == 0 {
+					return fmt.Errorf("--ids must contain at least one entity ID")
+				}
+
+				revisions, errs := state.client.FetchRevisions(cmd.Context(), ids, 10)
+				for _, e := range errs {
+					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: %v\n", e)
+				}
+
+				data := make([]api.BulkEntityData, 0, len(revisions))
+				for _, id := range ids {
+					rev, ok := revisions[id]
+					if !ok {
+						continue
+					}
+					data = append(data, api.BulkEntityData{
+						EntityID: int(id),
+						Revision: int(rev),
+					})
+				}
+
+				if len(data) == 0 {
+					return fmt.Errorf("no entities could be fetched for bulk action")
+				}
+
+				req = api.BulkActionRequest{
+					Actions: []string{apiAction},
+					Data:    data,
+				}
 			}
 
-			if len(data) == 0 {
-				return fmt.Errorf("no entities could be fetched for bulk action")
-			}
-
-			req := api.BulkActionRequest{
-				Actions: []string{apiAction},
-				Data:    data,
-			}
 			result, err := state.client.BulkAction(cmd.Context(), req)
 			if err != nil {
 				return fmt.Errorf("bulk action: %w", err)
@@ -554,8 +591,9 @@ func newBulkActionCmd(state *appState, use, short, apiAction string) *cobra.Comm
 		},
 	}
 
-	cmd.Flags().StringVar(&idsFlag, "ids", "", "Comma-separated entity IDs (required)")
+	cmd.Flags().StringVar(&idsFlag, "ids", "", "Comma-separated entity IDs")
 	cmd.Flags().BoolVar(&asJSON, "json", false, "Output BulkActionResponse JSON")
+	cmd.Flags().BoolVar(&fromStdin, "from-stdin", false, "Read full BulkActionRequest JSON from stdin instead of --ids")
 	return cmd
 }
 

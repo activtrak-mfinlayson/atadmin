@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/activtrak-mfinlayson/atadmin/internal/api"
 	"github.com/activtrak-mfinlayson/atadmin/internal/bulk"
 	"github.com/activtrak-mfinlayson/atadmin/internal/output"
+	"github.com/activtrak-mfinlayson/atadmin/internal/stdin"
 	"github.com/activtrak-mfinlayson/atadmin/internal/tty"
 )
 
@@ -272,19 +274,38 @@ func newClientsMergeCmd(state *appState) *cobra.Command {
 
 // newClientsMergeBulkCmd implements "clients merge-bulk --file <path>".
 func newClientsMergeBulkCmd(state *appState) *cobra.Command {
-	var filePath string
+	var (
+		filePath  string
+		fromStdin bool
+	)
 
 	cmd := &cobra.Command{
 		Use:   "merge-bulk",
 		Short: "Merge clients in bulk from a JSON or CSV file",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if filePath == "" {
-				return fmt.Errorf("--file is required")
+			if filePath != "" && fromStdin {
+				return fmt.Errorf("--from-stdin: --file and --from-stdin are mutually exclusive")
 			}
 
-			records, err := bulk.ParseFile(filePath)
-			if err != nil {
-				return fmt.Errorf("reading file %q: %w", filePath, err)
+			var records []map[string]any
+			var err error
+
+			if fromStdin {
+				if err := stdin.EnsurePiped(); err != nil {
+					return err
+				}
+				records, err = stdin.ReadRecords(os.Stdin)
+				if err != nil {
+					return err
+				}
+			} else {
+				if filePath == "" {
+					return fmt.Errorf("--file is required")
+				}
+				records, err = bulk.ParseFile(filePath)
+				if err != nil {
+					return fmt.Errorf("reading file %q: %w", filePath, err)
+				}
 			}
 
 			if err := state.client.MergeUsersBulk(cmd.Context(), records); err != nil {
@@ -296,26 +317,46 @@ func newClientsMergeBulkCmd(state *appState) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON or CSV file (required)")
+	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON or CSV file")
+	cmd.Flags().BoolVar(&fromStdin, "from-stdin", false, "Read JSON array from stdin instead of --file")
 
 	return cmd
 }
 
 // newClientsUnmergeBulkCmd implements "clients unmerge-bulk --file <path>".
 func newClientsUnmergeBulkCmd(state *appState) *cobra.Command {
-	var filePath string
+	var (
+		filePath  string
+		fromStdin bool
+	)
 
 	cmd := &cobra.Command{
 		Use:   "unmerge-bulk",
 		Short: "Unmerge clients in bulk from a JSON or CSV file",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if filePath == "" {
-				return fmt.Errorf("--file is required")
+			if filePath != "" && fromStdin {
+				return fmt.Errorf("--from-stdin: --file and --from-stdin are mutually exclusive")
 			}
 
-			records, err := bulk.ParseFile(filePath)
-			if err != nil {
-				return fmt.Errorf("reading file %q: %w", filePath, err)
+			var records []map[string]any
+			var err error
+
+			if fromStdin {
+				if err := stdin.EnsurePiped(); err != nil {
+					return err
+				}
+				records, err = stdin.ReadRecords(os.Stdin)
+				if err != nil {
+					return err
+				}
+			} else {
+				if filePath == "" {
+					return fmt.Errorf("--file is required")
+				}
+				records, err = bulk.ParseFile(filePath)
+				if err != nil {
+					return fmt.Errorf("reading file %q: %w", filePath, err)
+				}
 			}
 
 			if err := state.client.UnmergeUsersBulk(cmd.Context(), records); err != nil {
@@ -327,7 +368,8 @@ func newClientsUnmergeBulkCmd(state *appState) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON or CSV file (required)")
+	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON or CSV file")
+	cmd.Flags().BoolVar(&fromStdin, "from-stdin", false, "Read JSON array from stdin instead of --file")
 
 	return cmd
 }
@@ -383,19 +425,38 @@ func newClientsAliasSetCmd(state *appState) *cobra.Command {
 
 // newClientsAliasBulkCmd implements "clients alias bulk --file <path>".
 func newClientsAliasBulkCmd(state *appState) *cobra.Command {
-	var filePath string
+	var (
+		filePath  string
+		fromStdin bool
+	)
 
 	cmd := &cobra.Command{
 		Use:   "bulk",
 		Short: "Update client aliases in bulk from a JSON or CSV file",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if filePath == "" {
-				return fmt.Errorf("--file is required")
+			if filePath != "" && fromStdin {
+				return fmt.Errorf("--from-stdin: --file and --from-stdin are mutually exclusive")
 			}
 
-			records, err := bulk.ParseFile(filePath)
-			if err != nil {
-				return fmt.Errorf("reading file %q: %w", filePath, err)
+			var records []map[string]any
+			var err error
+
+			if fromStdin {
+				if err := stdin.EnsurePiped(); err != nil {
+					return err
+				}
+				records, err = stdin.ReadRecords(os.Stdin)
+				if err != nil {
+					return err
+				}
+			} else {
+				if filePath == "" {
+					return fmt.Errorf("--file is required")
+				}
+				records, err = bulk.ParseFile(filePath)
+				if err != nil {
+					return fmt.Errorf("reading file %q: %w", filePath, err)
+				}
 			}
 
 			if err := state.client.UpdateAliasBulk(cmd.Context(), records); err != nil {
@@ -407,7 +468,8 @@ func newClientsAliasBulkCmd(state *appState) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON or CSV file (required)")
+	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON or CSV file")
+	cmd.Flags().BoolVar(&fromStdin, "from-stdin", false, "Read JSON array from stdin instead of --file")
 
 	return cmd
 }
@@ -553,19 +615,38 @@ func newDNTUpdateCmd(state *appState) *cobra.Command {
 
 // newDNTAddBulkCmd implements "clients donottrack add-bulk --file <path>".
 func newDNTAddBulkCmd(state *appState) *cobra.Command {
-	var filePath string
+	var (
+		filePath  string
+		fromStdin bool
+	)
 
 	cmd := &cobra.Command{
 		Use:   "add-bulk",
 		Short: "Add Do Not Track entries in bulk from a JSON or CSV file",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if filePath == "" {
-				return fmt.Errorf("--file is required")
+			if filePath != "" && fromStdin {
+				return fmt.Errorf("--from-stdin: --file and --from-stdin are mutually exclusive")
 			}
 
-			records, err := bulk.ParseFile(filePath)
-			if err != nil {
-				return fmt.Errorf("reading file %q: %w", filePath, err)
+			var records []map[string]any
+			var err error
+
+			if fromStdin {
+				if err := stdin.EnsurePiped(); err != nil {
+					return err
+				}
+				records, err = stdin.ReadRecords(os.Stdin)
+				if err != nil {
+					return err
+				}
+			} else {
+				if filePath == "" {
+					return fmt.Errorf("--file is required")
+				}
+				records, err = bulk.ParseFile(filePath)
+				if err != nil {
+					return fmt.Errorf("reading file %q: %w", filePath, err)
+				}
 			}
 
 			if err := state.client.AddDoNotTrackBulk(cmd.Context(), records); err != nil {
@@ -577,26 +658,46 @@ func newDNTAddBulkCmd(state *appState) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON or CSV file (required)")
+	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON or CSV file")
+	cmd.Flags().BoolVar(&fromStdin, "from-stdin", false, "Read JSON array from stdin instead of --file")
 
 	return cmd
 }
 
 // newDNTRemoveBulkCmd implements "clients donottrack remove-bulk --file <path>".
 func newDNTRemoveBulkCmd(state *appState) *cobra.Command {
-	var filePath string
+	var (
+		filePath  string
+		fromStdin bool
+	)
 
 	cmd := &cobra.Command{
 		Use:   "remove-bulk",
 		Short: "Remove Do Not Track entries in bulk from a JSON or CSV file",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if filePath == "" {
-				return fmt.Errorf("--file is required")
+			if filePath != "" && fromStdin {
+				return fmt.Errorf("--from-stdin: --file and --from-stdin are mutually exclusive")
 			}
 
-			records, err := bulk.ParseFile(filePath)
-			if err != nil {
-				return fmt.Errorf("reading file %q: %w", filePath, err)
+			var records []map[string]any
+			var err error
+
+			if fromStdin {
+				if err := stdin.EnsurePiped(); err != nil {
+					return err
+				}
+				records, err = stdin.ReadRecords(os.Stdin)
+				if err != nil {
+					return err
+				}
+			} else {
+				if filePath == "" {
+					return fmt.Errorf("--file is required")
+				}
+				records, err = bulk.ParseFile(filePath)
+				if err != nil {
+					return fmt.Errorf("reading file %q: %w", filePath, err)
+				}
 			}
 
 			if err := state.client.RemoveDoNotTrackBulk(cmd.Context(), records); err != nil {
@@ -608,7 +709,8 @@ func newDNTRemoveBulkCmd(state *appState) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON or CSV file (required)")
+	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON or CSV file")
+	cmd.Flags().BoolVar(&fromStdin, "from-stdin", false, "Read JSON array from stdin instead of --file")
 
 	return cmd
 }
