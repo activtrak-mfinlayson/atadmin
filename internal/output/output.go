@@ -98,7 +98,7 @@ func ToGeneric(v any) (any, error) {
 }
 
 func reflectToGeneric(rv reflect.Value) (any, error) {
-	for rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface {
+	for rv.Kind() == reflect.Pointer || rv.Kind() == reflect.Interface {
 		if rv.IsNil() {
 			return nil, nil
 		}
@@ -180,7 +180,7 @@ func isEmptyReflectValue(v reflect.Value) bool {
 	switch v.Kind() {
 	case reflect.Slice, reflect.Map:
 		return v.IsNil() || v.Len() == 0
-	case reflect.Ptr, reflect.Interface:
+	case reflect.Pointer, reflect.Interface:
 		return v.IsNil()
 	default:
 		return v.IsZero()

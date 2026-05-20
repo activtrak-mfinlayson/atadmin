@@ -205,7 +205,7 @@ func TestToGeneric(t *testing.T) {
 		ID       int     `json:"id"`
 		Name     string  `json:"name"`
 		Hidden   string  `json:"-"`
-		Internal string  `json:"-,"`
+		Internal string  `json:"-"`
 		Optional *string `json:"opt,omitempty"`
 		Sub      *Inner  `json:"sub,omitempty"`
 	}
