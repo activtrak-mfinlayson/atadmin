@@ -196,3 +196,99 @@ func TestJSONSummary(t *testing.T) {
 }
 
 func intPtr(n int) *int { return &n }
+
+func TestToGeneric(t *testing.T) {
+	type Inner struct {
+		Value string `json:"value"`
+	}
+	type Sample struct {
+		ID       int     `json:"id"`
+		Name     string  `json:"name"`
+		Hidden   string  `json:"-"`
+		Internal string  `json:"-,"`
+		Optional *string `json:"opt,omitempty"`
+		Sub      *Inner  `json:"sub,omitempty"`
+	}
+
+	t.Run("flat struct to map", func(t *testing.T) {
+		s := Sample{ID: 42, Name: "alice"}
+		got, err := output.ToGeneric(s)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		m, ok := got.(map[string]any)
+		if !ok {
+			t.Fatalf("expected map[string]any, got %T", got)
+		}
+		if m["id"] != 42 || m["name"] != "alice" {
+			t.Errorf("unexpected map contents: %v", m)
+		}
+		if _, exists := m["Hidden"]; exists {
+			t.Error("json:\"-\" field should be excluded")
+		}
+		if _, exists := m["opt"]; exists {
+			t.Error("nil omitempty pointer should be excluded")
+		}
+	})
+
+	t.Run("slice of structs to []any", func(t *testing.T) {
+		items := []Sample{{ID: 1, Name: "a"}, {ID: 2, Name: "b"}}
+		got, err := output.ToGeneric(items)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		arr, ok := got.([]any)
+		if !ok {
+			t.Fatalf("expected []any, got %T", got)
+		}
+		if len(arr) != 2 {
+			t.Fatalf("expected 2 elements, got %d", len(arr))
+		}
+		m := arr[0].(map[string]any)
+		if m["id"] != 1 {
+			t.Errorf("expected id=1, got %v", m["id"])
+		}
+	})
+
+	t.Run("non-nil pointer field included", func(t *testing.T) {
+		str := "present"
+		s := Sample{ID: 1, Optional: &str, Sub: &Inner{Value: "x"}}
+		got, err := output.ToGeneric(s)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		m := got.(map[string]any)
+		if m["opt"] != "present" {
+			t.Errorf("expected opt=present, got %v", m["opt"])
+		}
+		sub, ok := m["sub"].(map[string]any)
+		if !ok || sub["value"] != "x" {
+			t.Errorf("expected nested sub.value=x, got %v", m["sub"])
+		}
+	})
+
+	t.Run("nil pointer to struct returns nil", func(t *testing.T) {
+		var p *Sample
+		got, err := output.ToGeneric(p)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != nil {
+			t.Errorf("expected nil, got %v", got)
+		}
+	})
+
+	t.Run("omitempty slice excluded when nil", func(t *testing.T) {
+		type WithSlice struct {
+			Items []string `json:"items,omitempty"`
+		}
+		got, err := output.ToGeneric(WithSlice{})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		m := got.(map[string]any)
+		if _, exists := m["items"]; exists {
+			t.Error("nil omitempty slice should be excluded")
+		}
+	})
+}

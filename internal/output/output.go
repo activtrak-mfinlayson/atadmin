@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
 	"sort"
 	"strings"
 	"text/tabwriter"
@@ -91,11 +92,97 @@ func JSONSummary(out io.Writer, returned int, total *int, hasMore bool) error {
 
 // ToGeneric converts any typed value to its generic JSON representation
 // (map[string]any, []any, etc.) so that FilterFields can be applied.
+// Uses reflection to avoid double-serialization overhead.
 func ToGeneric(v any) (any, error) {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return nil, err
+	return reflectToGeneric(reflect.ValueOf(v))
+}
+
+func reflectToGeneric(rv reflect.Value) (any, error) {
+	for rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface {
+		if rv.IsNil() {
+			return nil, nil
+		}
+		rv = rv.Elem()
 	}
-	var out any
-	return out, json.Unmarshal(b, &out)
+	switch rv.Kind() {
+	case reflect.Struct:
+		rt := rv.Type()
+		m := make(map[string]any, rt.NumField())
+		for i := 0; i < rt.NumField(); i++ {
+			field := rt.Field(i)
+			fv := rv.Field(i)
+			if !field.IsExported() {
+				continue
+			}
+			name, omitempty := jsonFieldInfo(field)
+			if name == "-" {
+				continue
+			}
+			if omitempty && isEmptyReflectValue(fv) {
+				continue
+			}
+			val, err := reflectToGeneric(fv)
+			if err != nil {
+				return nil, err
+			}
+			m[name] = val
+		}
+		return m, nil
+	case reflect.Slice:
+		if rv.IsNil() {
+			return nil, nil
+		}
+		result := make([]any, rv.Len())
+		for i := range result {
+			val, err := reflectToGeneric(rv.Index(i))
+			if err != nil {
+				return nil, err
+			}
+			result[i] = val
+		}
+		return result, nil
+	case reflect.Map:
+		if rv.IsNil() {
+			return nil, nil
+		}
+		m := make(map[string]any, rv.Len())
+		for _, key := range rv.MapKeys() {
+			val, err := reflectToGeneric(rv.MapIndex(key))
+			if err != nil {
+				return nil, err
+			}
+			m[fmt.Sprintf("%v", key.Interface())] = val
+		}
+		return m, nil
+	default:
+		return rv.Interface(), nil
+	}
+}
+
+func jsonFieldInfo(f reflect.StructField) (name string, omitempty bool) {
+	tag := f.Tag.Get("json")
+	if tag == "" {
+		return f.Name, false
+	}
+	parts := strings.SplitN(tag, ",", 2)
+	if parts[0] == "" {
+		name = f.Name
+	} else {
+		name = parts[0]
+	}
+	if len(parts) > 1 && strings.Contains(parts[1], "omitempty") {
+		omitempty = true
+	}
+	return
+}
+
+func isEmptyReflectValue(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Slice, reflect.Map:
+		return v.IsNil() || v.Len() == 0
+	case reflect.Ptr, reflect.Interface:
+		return v.IsNil()
+	default:
+		return v.IsZero()
+	}
 }
