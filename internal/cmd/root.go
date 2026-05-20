@@ -86,6 +86,8 @@ Use it to manage users, groups, devices, and settings for your ActivTrak account
 
 	// Register all resource subcommands.
 	root.AddCommand(newAuthCmd())
+	root.AddCommand(newUsersCmd(&state))
+	root.AddCommand(newAgentsCmd(&state))
 	root.AddCommand(newClientsCmd(&state))
 	root.AddCommand(newGroupsCmd(&state))
 	root.AddCommand(newConsumersCmd(&state))
@@ -98,6 +100,7 @@ Use it to manage users, groups, devices, and settings for your ActivTrak account
 	root.AddCommand(newAuditLogCmd(&state))
 	root.AddCommand(newHRDCCmd(&state))
 	root.AddCommand(newNotificationsCmd(&state))
+	root.AddCommand(newMCPCmd())
 
 	return root
 }

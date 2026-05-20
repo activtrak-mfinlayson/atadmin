@@ -122,3 +122,116 @@ type AuditLog struct {
 	Details      string `json:"details"`
 	AttachmentID string `json:"attachmentId"`
 }
+
+// ---------------------------------------------------------------------------
+// Identity API types
+// ---------------------------------------------------------------------------
+
+// IdentityField wraps a single scalar field value with its field-level ID and
+// the source system that last set the value.
+type IdentityField struct {
+	Value  string `json:"value"`
+	ID     string `json:"id"`
+	Source string `json:"source"`
+}
+
+// IdentityAgent is a device/client associated with an Identity entity.
+type IdentityAgent struct {
+	UserID        int    `json:"userId"`
+	UserName      string `json:"userName"`
+	LogonDomain   string `json:"logonDomain"`
+	Alias         string `json:"alias"`
+	Tracked       bool   `json:"tracked"`
+	LicenseStatus string `json:"licenseStatus"`
+	LastLog       string `json:"lastLog"`
+	FirstLog      string `json:"firstLog"`
+	Deleted       bool   `json:"deleted"`
+}
+
+// IdentityGroupRef is a group membership record embedded in an Identity.
+type IdentityGroupRef struct {
+	GroupID       int    `json:"groupId"`
+	GroupName     string `json:"groupName"`
+	GroupType     int    `json:"groupType"`
+	GroupTypeName string `json:"groupTypeName"`
+}
+
+// Identity represents a logical person (entity) in the ActivTrak Identity system.
+type Identity struct {
+	ID               int64              `json:"id"`
+	Revision         int64              `json:"revision"`
+	DisplayName      *IdentityField     `json:"displayName"`
+	FirstName        *IdentityField     `json:"firstName"`
+	MiddleName       *IdentityField     `json:"middleName"`
+	LastName         *IdentityField     `json:"lastName"`
+	Emails           []IdentityField    `json:"emails"`
+	UPNs             []IdentityField    `json:"upns"`
+	EmployeeIDs      []IdentityField    `json:"employeeIds"`
+	Groups           []IdentityGroupRef `json:"groups"`
+	PrimaryGroupID   *int               `json:"primaryGroupId"`
+	PrimaryGroupName string             `json:"primaryGroupName"`
+	Agents           []IdentityAgent    `json:"agents"`
+	Tracked          bool               `json:"tracked"`
+	Status           string             `json:"status"`
+	Timezone         *IdentityField     `json:"timezone"`
+	Created          string             `json:"created"`
+	Updated          string             `json:"updated"`
+	DisplayID        *IdentityField     `json:"displayId"`
+}
+
+// UsersPage is the paginated response for Identity list operations.
+type UsersPage struct {
+	Results    []Identity `json:"results"`
+	Cursor     string     `json:"cursor"`
+	TotalCount int        `json:"totalCount"`
+}
+
+// IdentityListParams are the query parameters for listing identities or agents.
+type IdentityListParams struct {
+	Search     string
+	SearchType string
+	Filters    []string
+	Sort       string
+	SortDir    string
+	Limit      int    // 0 = omit (server default)
+	Cursor     string
+}
+
+// UpdateUserRequest holds the fields to patch on a PATCH call.
+// Only non-nil pointer fields are sent in the request body.
+type UpdateUserRequest struct {
+	DisplayName *string
+	FirstName   *string
+	LastName    *string
+	Timezone    *string
+	Tracked     *bool
+}
+
+// BulkActionRequest is the request body for /identity/v1/entities/bulk.
+type BulkActionRequest struct {
+	Actions []string         `json:"actions"`
+	Data    []BulkEntityData `json:"data"`
+}
+
+// BulkEntityData is one entity entry within a bulk action.
+type BulkEntityData struct {
+	EntityID int `json:"entityId"`
+	Revision int `json:"revision"`
+}
+
+// BulkActionResponse is the response from /identity/v1/entities/bulk.
+type BulkActionResponse struct {
+	Successful []BulkEntitySuccess `json:"successful"`
+	Failures   []BulkEntityFailure `json:"failures"`
+}
+
+// BulkEntitySuccess records a successful bulk action outcome for one entity.
+type BulkEntitySuccess struct {
+	EntityID int `json:"entityId"`
+}
+
+// BulkEntityFailure records a failed bulk action outcome for one entity.
+type BulkEntityFailure struct {
+	EntityID int    `json:"entityId"`
+	Message  string `json:"message"`
+}

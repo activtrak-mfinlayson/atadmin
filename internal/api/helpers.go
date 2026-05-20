@@ -77,6 +77,8 @@ func checkResponse(resp *http.Response) error {
 		return fmt.Errorf("forbidden: your account role may not have permission for this operation")
 	case http.StatusNotFound:
 		return fmt.Errorf("not found: the requested resource does not exist")
+	case http.StatusConflict:
+		return fmt.Errorf("conflict (409): the entity was modified concurrently. Re-fetch with 'atadmin users get <id>' and retry")
 	case http.StatusTooManyRequests:
 		return fmt.Errorf("rate limited: retried multiple times. Wait a moment and try again")
 	default:
