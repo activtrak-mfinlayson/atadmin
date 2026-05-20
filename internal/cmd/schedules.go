@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -35,7 +36,10 @@ func newSchedulesCmd(state *appState) *cobra.Command {
 
 // newSchedulesListCmd implements "schedules list".
 func newSchedulesListCmd(state *appState) *cobra.Command {
-	var asJSON bool
+	var (
+		asJSON     bool
+		fieldsFlag string
+	)
 
 	cmd := &cobra.Command{
 		Use:   "list",
@@ -47,6 +51,13 @@ func newSchedulesListCmd(state *appState) *cobra.Command {
 			}
 
 			if asJSON {
+				if fieldsFlag != "" {
+					generic, err := output.ToGeneric(scheds)
+					if err != nil {
+						return fmt.Errorf("serializing results: %w", err)
+					}
+					return output.JSON(cmd.OutOrStdout(), output.FilterFields(generic, strings.Split(fieldsFlag, ",")))
+				}
 				return output.JSON(cmd.OutOrStdout(), scheds)
 			}
 
@@ -59,6 +70,7 @@ func newSchedulesListCmd(state *appState) *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&asJSON, "json", false, "Output raw JSON")
+	cmd.Flags().StringVar(&fieldsFlag, "fields", "", "Comma-separated top-level JSON keys to include (e.g. id,name)")
 	return cmd
 }
 

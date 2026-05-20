@@ -17,7 +17,7 @@
 
 **Purpose**: Confirm the project builds cleanly before adding changes.
 
-- [ ] T001 Verify project builds and all existing tests pass by running `go test ./...` and `go build -o bin/atadmin ./cmd/atadmin`
+- [X] T001 Verify project builds and all existing tests pass by running `go test ./...` and `go build -o bin/atadmin ./cmd/atadmin`
 
 ---
 
@@ -27,9 +27,9 @@
 
 **CRITICAL**: All Phase 3–5 tasks depend on this phase completing first.
 
-- [ ] T002 Add `FilterFields(data any, fields []string) any` function to `internal/output/output.go` — handles `map[string]any`, `[]any`, and passthrough for other types as specified in plan.md §1
-- [ ] T003 Add `SummaryResult` struct and `JSONSummary(out io.Writer, returned int, total *int, hasMore bool) error` function to `internal/output/output.go` using `*int` for `TotalItems` with `omitempty` as specified in data-model.md
-- [ ] T004 Add `TestFilterFields` and `TestJSONSummary` table-driven tests to `internal/output/output_test.go` covering: single object filtering, array filtering, passthrough for non-map types, nil total omitted from JSON, has_more true/false
+- [X] T002 Add `FilterFields(data any, fields []string) any` function to `internal/output/output.go` — handles `map[string]any`, `[]any`, and passthrough for other types as specified in plan.md §1
+- [X] T003 Add `SummaryResult` struct and `JSONSummary(out io.Writer, returned int, total *int, hasMore bool) error` function to `internal/output/output.go` using `*int` for `TotalItems` with `omitempty` as specified in data-model.md
+- [X] T004 Add `TestFilterFields` and `TestJSONSummary` table-driven tests to `internal/output/output_test.go` covering: single object filtering, array filtering, passthrough for non-map types, nil total omitted from JSON, has_more true/false
 
 **Checkpoint**: `go test ./internal/output/...` passes — helpers are ready for use in command files.
 
@@ -43,17 +43,17 @@
 
 ### Implementation
 
-- [ ] T005 [P] [US1] Add `--fields` flag and `output.FilterFields` call in `internal/cmd/users.go` list command — declare `var fieldsFlag string`, register `cmd.Flags().StringVar(&fieldsFlag, "fields", "", "...")`, apply `output.FilterFields(result, strings.Split(fieldsFlag, ","))` before `output.JSON()` when `fieldsFlag != ""`
-- [ ] T006 [P] [US1] Add `--fields` flag and `output.FilterFields` call in `internal/cmd/groups.go` list command
-- [ ] T007 [P] [US1] Add `--fields` flag and `output.FilterFields` call in `internal/cmd/clients.go` list command
-- [ ] T008 [P] [US1] Add `--fields` flag and `output.FilterFields` call in `internal/cmd/consumers.go` list command
-- [ ] T009 [P] [US1] Add `--fields` flag and `output.FilterFields` call in `internal/cmd/devices.go` list command
-- [ ] T010 [P] [US1] Add `--fields` flag and `output.FilterFields` call in `internal/cmd/alarms.go` list command
-- [ ] T011 [P] [US1] Add `--fields` flag and `output.FilterFields` call in `internal/cmd/signals.go` list command (no pagination on this command; `--fields` only per plan.md)
-- [ ] T012 [P] [US1] Add `--fields` flag and `output.FilterFields` call in `internal/cmd/schedules.go` list command (no pagination on this command; `--fields` only per plan.md)
-- [ ] T013 [P] [US1] Add `--fields` flag and `output.FilterFields` call in `internal/cmd/apikeys.go` list command (no pagination on this command; `--fields` only per plan.md)
-- [ ] T014 [P] [US1] Add `--fields` flag and `output.FilterFields` call in `internal/cmd/auditlog.go` list command
-- [ ] T015 [P] [US1] Add `--fields` flag and `output.FilterFields` call in `internal/cmd/agents.go` list command
+- [X] T005 [P] [US1] Add `--fields` flag and `output.FilterFields` call in `internal/cmd/users.go` list command — declare `var fieldsFlag string`, register `cmd.Flags().StringVar(&fieldsFlag, "fields", "", "...")`, apply `output.FilterFields(result, strings.Split(fieldsFlag, ","))` before `output.JSON()` when `fieldsFlag != ""`
+- [X] T006 [P] [US1] Add `--fields` flag and `output.FilterFields` call in `internal/cmd/groups.go` list command
+- [X] T007 [P] [US1] Add `--fields` flag and `output.FilterFields` call in `internal/cmd/clients.go` list command
+- [X] T008 [P] [US1] Add `--fields` flag and `output.FilterFields` call in `internal/cmd/consumers.go` list command
+- [X] T009 [P] [US1] Add `--fields` flag and `output.FilterFields` call in `internal/cmd/devices.go` list command
+- [X] T010 [P] [US1] Add `--fields` flag and `output.FilterFields` call in `internal/cmd/alarms.go` list command
+- [X] T011 [P] [US1] Add `--fields` flag and `output.FilterFields` call in `internal/cmd/signals.go` list command (no pagination on this command; `--fields` only per plan.md)
+- [X] T012 [P] [US1] Add `--fields` flag and `output.FilterFields` call in `internal/cmd/schedules.go` list command (no pagination on this command; `--fields` only per plan.md)
+- [X] T013 [P] [US1] Add `--fields` flag and `output.FilterFields` call in `internal/cmd/apikeys.go` list command (no pagination on this command; `--fields` only per plan.md)
+- [X] T014 [P] [US1] Add `--fields` flag and `output.FilterFields` call in `internal/cmd/auditlog.go` list command
+- [X] T015 [P] [US1] Add `--fields` flag and `output.FilterFields` call in `internal/cmd/agents.go` list command
 
 **Checkpoint**: All 11 list commands accept `--fields`; `go test ./...` passes; `go build` succeeds.
 
@@ -69,9 +69,9 @@
 
 ### Implementation
 
-- [ ] T016 [P] [US2] Add safe pagination guard to `internal/cmd/users.go` list command — add `if asJSON && !cmd.Flags().Changed("limit") && limit == 0 { limit = 50 }` before the API call
-- [ ] T017 [P] [US2] Add safe pagination guard to `internal/cmd/agents.go` list command — same `limit` pattern as T016
-- [ ] T018 [P] [US2] Add safe pagination guard to `internal/cmd/auditlog.go` list command — add `if asJSON && !cmd.Flags().Changed("page-size") && pageSize == 0 { pageSize = 50 }` before the API call
+- [X] T016 [P] [US2] Add safe pagination guard to `internal/cmd/users.go` list command — add `if asJSON && !cmd.Flags().Changed("limit") && limit == 0 { limit = 50 }` before the API call
+- [X] T017 [P] [US2] Add safe pagination guard to `internal/cmd/agents.go` list command — same `limit` pattern as T016
+- [X] T018 [P] [US2] Add safe pagination guard to `internal/cmd/auditlog.go` list command — add `if asJSON && !cmd.Flags().Changed("page-size") && pageSize == 0 { pageSize = 50 }` before the API call
 
 **Checkpoint**: `atadmin users list --json | jq length` returns ≤ 50; explicit `--limit` values still override the default.
 
@@ -87,14 +87,14 @@
 
 ### Implementation
 
-- [ ] T019 [P] [US3] Add `--summary` flag and `output.JSONSummary` short-circuit to `internal/cmd/users.go` list command — declare `var summaryFlag bool`, register `cmd.Flags().BoolVar`, add `if summaryFlag && asJSON { return output.JSONSummary(...) }` before `--fields` logic; derive `hasMore` from `response.NextCursor != ""`
-- [ ] T020 [P] [US3] Add `--summary` flag and `output.JSONSummary` short-circuit to `internal/cmd/groups.go` list command; derive `hasMore` from returned count vs page-size
-- [ ] T021 [P] [US3] Add `--summary` flag and `output.JSONSummary` short-circuit to `internal/cmd/clients.go` list command
-- [ ] T022 [P] [US3] Add `--summary` flag and `output.JSONSummary` short-circuit to `internal/cmd/consumers.go` list command
-- [ ] T023 [P] [US3] Add `--summary` flag and `output.JSONSummary` short-circuit to `internal/cmd/devices.go` list command
-- [ ] T024 [P] [US3] Add `--summary` flag and `output.JSONSummary` short-circuit to `internal/cmd/alarms.go` list command
-- [ ] T025 [P] [US3] Add `--summary` flag and `output.JSONSummary` short-circuit to `internal/cmd/auditlog.go` list command; derive `hasMore` from `len(items) == pageSize`
-- [ ] T026 [P] [US3] Add `--summary` flag and `output.JSONSummary` short-circuit to `internal/cmd/agents.go` list command; derive `hasMore` from `response.NextCursor != ""`
+- [X] T019 [P] [US3] Add `--summary` flag and `output.JSONSummary` short-circuit to `internal/cmd/users.go` list command — declare `var summaryFlag bool`, register `cmd.Flags().BoolVar`, add `if summaryFlag && asJSON { return output.JSONSummary(...) }` before `--fields` logic; derive `hasMore` from `response.NextCursor != ""`
+- [X] T020 [P] [US3] Add `--summary` flag and `output.JSONSummary` short-circuit to `internal/cmd/groups.go` list command; derive `hasMore` from returned count vs page-size
+- [X] T021 [P] [US3] Add `--summary` flag and `output.JSONSummary` short-circuit to `internal/cmd/clients.go` list command
+- [X] T022 [P] [US3] Add `--summary` flag and `output.JSONSummary` short-circuit to `internal/cmd/consumers.go` list command
+- [X] T023 [P] [US3] Add `--summary` flag and `output.JSONSummary` short-circuit to `internal/cmd/devices.go` list command
+- [X] T024 [P] [US3] Add `--summary` flag and `output.JSONSummary` short-circuit to `internal/cmd/alarms.go` list command
+- [X] T025 [P] [US3] Add `--summary` flag and `output.JSONSummary` short-circuit to `internal/cmd/auditlog.go` list command; derive `hasMore` from `len(items) == pageSize`
+- [X] T026 [P] [US3] Add `--summary` flag and `output.JSONSummary` short-circuit to `internal/cmd/agents.go` list command; derive `hasMore` from `response.NextCursor != ""`
 
 **Checkpoint**: All 8 paginated list commands return aggregate stats with `--json --summary`; `go test ./...` passes.
 
@@ -104,10 +104,10 @@
 
 **Purpose**: Final build verification and acceptance criteria validation from spec.md.
 
-- [ ] T027 Run `go test ./...` — confirm all tests pass with no regressions across the entire module
-- [ ] T028 Run `go build -o bin/atadmin ./cmd/atadmin` — confirm binary builds cleanly
-- [ ] T029 Validate all three spec.md acceptance criteria using quickstart.md commands: (1) `atadmin users list --json --fields id,email | jq '.[0] | keys'` → `["email","id"]`, (2) `atadmin users list --json | jq length` → ≤ 50, (3) `atadmin groups list --json --summary` → aggregate stats object
-- [ ] T030 Run `go run golang.org/x/vuln/cmd/govulncheck@latest ./...` — confirm no new vulnerabilities introduced
+- [X] T027 Run `go test ./...` — confirm all tests pass with no regressions across the entire module
+- [X] T028 Run `go build -o bin/atadmin ./cmd/atadmin` — confirm binary builds cleanly
+- [X] T029 Validate all three spec.md acceptance criteria using quickstart.md commands: (1) `atadmin users list --json --fields id,email | jq '.[0] | keys'` → `["email","id"]`, (2) `atadmin users list --json | jq length` → ≤ 50, (3) `atadmin groups list --json --summary` → aggregate stats object
+- [X] T030 Run `go run golang.org/x/vuln/cmd/govulncheck@latest ./...` — confirm no new vulnerabilities introduced
 
 ---
 

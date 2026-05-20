@@ -41,20 +41,26 @@ func newUsersCmd(state *appState) *cobra.Command {
 
 func newUsersListCmd(state *appState) *cobra.Command {
 	var (
-		filter     string
-		search     string
-		searchType string
-		sort       string
-		sortDir    string
-		limit      int
-		cursor     string
-		asJSON     bool
+		filter      string
+		search      string
+		searchType  string
+		sort        string
+		sortDir     string
+		limit       int
+		cursor      string
+		asJSON      bool
+		fieldsFlag  string
+		summaryFlag bool
 	)
 
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List identity users",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if asJSON && !cmd.Flags().Changed("limit") && limit == 0 {
+				limit = 50
+			}
+
 			params := api.IdentityListParams{
 				Search:     search,
 				SearchType: searchType,
@@ -73,6 +79,16 @@ func newUsersListCmd(state *appState) *cobra.Command {
 			}
 
 			if asJSON {
+				if summaryFlag {
+					return output.JSONSummary(cmd.OutOrStdout(), len(page.Results), nil, page.Cursor != "")
+				}
+				if fieldsFlag != "" {
+					generic, err := output.ToGeneric(page.Results)
+					if err != nil {
+						return fmt.Errorf("serializing results: %w", err)
+					}
+					return output.JSON(cmd.OutOrStdout(), output.FilterFields(generic, strings.Split(fieldsFlag, ",")))
+				}
 				return output.JSON(cmd.OutOrStdout(), page)
 			}
 
@@ -100,6 +116,8 @@ func newUsersListCmd(state *appState) *cobra.Command {
 	cmd.Flags().IntVar(&limit, "limit", 0, "Maximum results (0 = server default)")
 	cmd.Flags().StringVar(&cursor, "cursor", "", "Pagination cursor from a previous response")
 	cmd.Flags().BoolVar(&asJSON, "json", false, "Output raw JSON")
+	cmd.Flags().StringVar(&fieldsFlag, "fields", "", "Comma-separated top-level JSON keys to include (e.g. id,email)")
+	cmd.Flags().BoolVar(&summaryFlag, "summary", false, "Return aggregate statistics instead of full results")
 
 	return cmd
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -43,9 +44,11 @@ func newConsumersCmd(state *appState) *cobra.Command {
 // newConsumersListCmd implements "consumers list".
 func newConsumersListCmd(state *appState) *cobra.Command {
 	var (
-		page     int
-		pageSize int
-		asJSON   bool
+		page        int
+		pageSize    int
+		asJSON      bool
+		fieldsFlag  string
+		summaryFlag bool
 	)
 
 	cmd := &cobra.Command{
@@ -58,6 +61,16 @@ func newConsumersListCmd(state *appState) *cobra.Command {
 			}
 
 			if asJSON {
+				if summaryFlag {
+					return output.JSONSummary(cmd.OutOrStdout(), len(consumers), nil, len(consumers) == pageSize)
+				}
+				if fieldsFlag != "" {
+					generic, err := output.ToGeneric(consumers)
+					if err != nil {
+						return fmt.Errorf("serializing results: %w", err)
+					}
+					return output.JSON(cmd.OutOrStdout(), output.FilterFields(generic, strings.Split(fieldsFlag, ",")))
+				}
 				return output.JSON(cmd.OutOrStdout(), consumers)
 			}
 
@@ -78,6 +91,8 @@ func newConsumersListCmd(state *appState) *cobra.Command {
 	cmd.Flags().IntVar(&page, "page", 1, "Page number")
 	cmd.Flags().IntVar(&pageSize, "page-size", 50, "Number of results per page")
 	cmd.Flags().BoolVar(&asJSON, "json", false, "Output raw JSON")
+	cmd.Flags().StringVar(&fieldsFlag, "fields", "", "Comma-separated top-level JSON keys to include (e.g. id,username)")
+	cmd.Flags().BoolVar(&summaryFlag, "summary", false, "Return aggregate statistics instead of full results")
 
 	return cmd
 }

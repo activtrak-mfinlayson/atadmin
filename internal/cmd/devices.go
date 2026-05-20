@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -33,9 +34,11 @@ func newDevicesCmd(state *appState) *cobra.Command {
 // newDevicesListCmd implements "devices list".
 func newDevicesListCmd(state *appState) *cobra.Command {
 	var (
-		page     int
-		pageSize int
-		asJSON   bool
+		page        int
+		pageSize    int
+		asJSON      bool
+		fieldsFlag  string
+		summaryFlag bool
 	)
 
 	cmd := &cobra.Command{
@@ -48,6 +51,16 @@ func newDevicesListCmd(state *appState) *cobra.Command {
 			}
 
 			if asJSON {
+				if summaryFlag {
+					return output.JSONSummary(cmd.OutOrStdout(), len(devices), nil, len(devices) == pageSize)
+				}
+				if fieldsFlag != "" {
+					generic, err := output.ToGeneric(devices)
+					if err != nil {
+						return fmt.Errorf("serializing results: %w", err)
+					}
+					return output.JSON(cmd.OutOrStdout(), output.FilterFields(generic, strings.Split(fieldsFlag, ",")))
+				}
 				return output.JSON(cmd.OutOrStdout(), devices)
 			}
 
@@ -67,6 +80,8 @@ func newDevicesListCmd(state *appState) *cobra.Command {
 	cmd.Flags().IntVar(&page, "page", 1, "Page number")
 	cmd.Flags().IntVar(&pageSize, "page-size", 50, "Number of results per page")
 	cmd.Flags().BoolVar(&asJSON, "json", false, "Output raw JSON")
+	cmd.Flags().StringVar(&fieldsFlag, "fields", "", "Comma-separated top-level JSON keys to include (e.g. id,hostname)")
+	cmd.Flags().BoolVar(&summaryFlag, "summary", false, "Return aggregate statistics instead of full results")
 
 	return cmd
 }

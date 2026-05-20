@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -41,9 +42,11 @@ func newGroupsCmd(state *appState) *cobra.Command {
 // newGroupsListCmd implements "groups list".
 func newGroupsListCmd(state *appState) *cobra.Command {
 	var (
-		page     int
-		pageSize int
-		asJSON   bool
+		page        int
+		pageSize    int
+		asJSON      bool
+		fieldsFlag  string
+		summaryFlag bool
 	)
 
 	cmd := &cobra.Command{
@@ -56,6 +59,16 @@ func newGroupsListCmd(state *appState) *cobra.Command {
 			}
 
 			if asJSON {
+				if summaryFlag {
+					return output.JSONSummary(cmd.OutOrStdout(), len(groups), nil, len(groups) == pageSize)
+				}
+				if fieldsFlag != "" {
+					generic, err := output.ToGeneric(groups)
+					if err != nil {
+						return fmt.Errorf("serializing results: %w", err)
+					}
+					return output.JSON(cmd.OutOrStdout(), output.FilterFields(generic, strings.Split(fieldsFlag, ",")))
+				}
 				return output.JSON(cmd.OutOrStdout(), groups)
 			}
 
@@ -75,6 +88,8 @@ func newGroupsListCmd(state *appState) *cobra.Command {
 	cmd.Flags().IntVar(&page, "page", 1, "Page number")
 	cmd.Flags().IntVar(&pageSize, "page-size", 50, "Number of results per page")
 	cmd.Flags().BoolVar(&asJSON, "json", false, "Output raw JSON")
+	cmd.Flags().StringVar(&fieldsFlag, "fields", "", "Comma-separated top-level JSON keys to include (e.g. id,name)")
+	cmd.Flags().BoolVar(&summaryFlag, "summary", false, "Return aggregate statistics instead of full results")
 
 	return cmd
 }
