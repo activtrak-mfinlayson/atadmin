@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -30,20 +31,26 @@ func newAuditLogCmd(state *appState) *cobra.Command {
 // newAuditLogListCmd implements "auditlog list".
 func newAuditLogListCmd(state *appState) *cobra.Command {
 	var (
-		from     string
-		to       string
-		filters  string
-		sortCol  string
-		sortDesc bool
-		page     int
-		pageSize int
-		asJSON   bool
+		from        string
+		to          string
+		filters     string
+		sortCol     string
+		sortDesc    bool
+		page        int
+		pageSize    int
+		asJSON      bool
+		fieldsFlag  string
+		summaryFlag bool
 	)
 
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List audit log entries",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if asJSON && !cmd.Flags().Changed("page-size") && pageSize == 0 {
+				pageSize = 50
+			}
+
 			logs, err := state.client.ListAuditLogs(
 				cmd.Context(),
 				from, to, filters, sortCol,
@@ -55,6 +62,16 @@ func newAuditLogListCmd(state *appState) *cobra.Command {
 			}
 
 			if asJSON {
+				if summaryFlag {
+					return output.JSONSummary(cmd.OutOrStdout(), len(logs), nil, len(logs) == pageSize)
+				}
+				if fieldsFlag != "" {
+					generic, err := output.ToGeneric(logs)
+					if err != nil {
+						return fmt.Errorf("serializing results: %w", err)
+					}
+					return output.JSON(cmd.OutOrStdout(), output.FilterFields(generic, strings.Split(fieldsFlag, ",")))
+				}
 				return output.JSON(cmd.OutOrStdout(), logs)
 			}
 
@@ -80,6 +97,8 @@ func newAuditLogListCmd(state *appState) *cobra.Command {
 	cmd.Flags().IntVar(&page, "page", 0, "Page number (0 = server default)")
 	cmd.Flags().IntVar(&pageSize, "page-size", 0, "Results per page (0 = server default)")
 	cmd.Flags().BoolVar(&asJSON, "json", false, "Output raw JSON")
+	cmd.Flags().StringVar(&fieldsFlag, "fields", "", "Comma-separated top-level JSON keys to include (e.g. id,action)")
+	cmd.Flags().BoolVar(&summaryFlag, "summary", false, "Return aggregate statistics instead of full results")
 
 	return cmd
 }

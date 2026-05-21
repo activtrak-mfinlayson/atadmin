@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -31,7 +32,10 @@ func newSignalsCmd(state *appState) *cobra.Command {
 
 // newSignalsListCmd implements "signals list".
 func newSignalsListCmd(state *appState) *cobra.Command {
-	var asJSON bool
+	var (
+		asJSON     bool
+		fieldsFlag string
+	)
 
 	cmd := &cobra.Command{
 		Use:   "list",
@@ -43,6 +47,13 @@ func newSignalsListCmd(state *appState) *cobra.Command {
 			}
 
 			if asJSON {
+				if fieldsFlag != "" {
+					generic, err := output.ToGeneric(signals)
+					if err != nil {
+						return fmt.Errorf("serializing results: %w", err)
+					}
+					return output.JSON(cmd.OutOrStdout(), output.FilterFields(generic, strings.Split(fieldsFlag, ",")))
+				}
 				return output.JSON(cmd.OutOrStdout(), signals)
 			}
 
@@ -60,6 +71,7 @@ func newSignalsListCmd(state *appState) *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&asJSON, "json", false, "Output raw JSON")
+	cmd.Flags().StringVar(&fieldsFlag, "fields", "", "Comma-separated top-level JSON keys to include (e.g. id,name)")
 	return cmd
 }
 

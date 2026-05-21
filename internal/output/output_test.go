@@ -52,3 +52,243 @@ func TestJSON(t *testing.T) {
 		t.Errorf("unexpected JSON output: %q", got)
 	}
 }
+
+func TestFilterFields(t *testing.T) {
+	tests := []struct {
+		name   string
+		data   any
+		fields []string
+		check  func(t *testing.T, got any)
+	}{
+		{
+			name:   "single object - selected keys retained",
+			data:   map[string]any{"id": 1, "email": "a@b.com", "status": "active"},
+			fields: []string{"id", "email"},
+			check: func(t *testing.T, got any) {
+				m, ok := got.(map[string]any)
+				if !ok {
+					t.Fatalf("expected map[string]any, got %T", got)
+				}
+				if m["id"] != 1 || m["email"] != "a@b.com" {
+					t.Errorf("missing expected keys: %v", m)
+				}
+				if _, exists := m["status"]; exists {
+					t.Errorf("unexpected key 'status' in result")
+				}
+			},
+		},
+		{
+			name:   "array filtering",
+			data:   []any{map[string]any{"id": 1, "email": "a@b.com", "status": "active"}},
+			fields: []string{"id"},
+			check: func(t *testing.T, got any) {
+				arr, ok := got.([]any)
+				if !ok {
+					t.Fatalf("expected []any, got %T", got)
+				}
+				m := arr[0].(map[string]any)
+				if m["id"] != 1 {
+					t.Errorf("expected id=1, got %v", m["id"])
+				}
+				if _, exists := m["email"]; exists {
+					t.Errorf("unexpected key 'email' in result")
+				}
+			},
+		},
+		{
+			name:   "passthrough for non-map type",
+			data:   "plain string",
+			fields: []string{"id"},
+			check: func(t *testing.T, got any) {
+				if got != "plain string" {
+					t.Errorf("expected passthrough, got %v", got)
+				}
+			},
+		},
+		{
+			name:   "nonexistent fields produce empty object",
+			data:   map[string]any{"id": 1, "email": "a@b.com"},
+			fields: []string{"nonexistent"},
+			check: func(t *testing.T, got any) {
+				m, ok := got.(map[string]any)
+				if !ok {
+					t.Fatalf("expected map[string]any, got %T", got)
+				}
+				if len(m) != 0 {
+					t.Errorf("expected empty map, got %v", m)
+				}
+			},
+		},
+		{
+			name:   "fields with whitespace are trimmed",
+			data:   map[string]any{"id": 1, "email": "a@b.com"},
+			fields: []string{" id ", " email "},
+			check: func(t *testing.T, got any) {
+				m, ok := got.(map[string]any)
+				if !ok {
+					t.Fatalf("expected map[string]any, got %T", got)
+				}
+				if len(m) != 2 {
+					t.Errorf("expected 2 keys, got %d: %v", len(m), m)
+				}
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := output.FilterFields(tc.data, tc.fields)
+			tc.check(t, got)
+		})
+	}
+}
+
+func TestJSONSummary(t *testing.T) {
+	tests := []struct {
+		name     string
+		returned int
+		total    *int
+		hasMore  bool
+		wantKeys []string
+		noKeys   []string
+	}{
+		{
+			name:     "nil total omitted from JSON",
+			returned: 10,
+			total:    nil,
+			hasMore:  false,
+			wantKeys: []string{`"returned_items"`, `"has_more"`},
+			noKeys:   []string{`"total_items"`},
+		},
+		{
+			name:     "total included when provided",
+			returned: 10,
+			total:    intPtr(100),
+			hasMore:  true,
+			wantKeys: []string{`"returned_items"`, `"total_items"`, `"has_more": true`},
+		},
+		{
+			name:     "has_more false",
+			returned: 5,
+			total:    nil,
+			hasMore:  false,
+			wantKeys: []string{`"has_more": false`},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			if err := output.JSONSummary(&buf, tc.returned, tc.total, tc.hasMore); err != nil {
+				t.Fatalf("JSONSummary error: %v", err)
+			}
+			got := buf.String()
+			for _, key := range tc.wantKeys {
+				if !strings.Contains(got, key) {
+					t.Errorf("expected %q in output:\n%s", key, got)
+				}
+			}
+			for _, key := range tc.noKeys {
+				if strings.Contains(got, key) {
+					t.Errorf("unexpected %q in output:\n%s", key, got)
+				}
+			}
+		})
+	}
+}
+
+func intPtr(n int) *int { return &n }
+
+func TestToGeneric(t *testing.T) {
+	type Inner struct {
+		Value string `json:"value"`
+	}
+	type Sample struct {
+		ID       int     `json:"id"`
+		Name     string  `json:"name"`
+		Hidden   string  `json:"-"`
+		Internal string  `json:"-"`
+		Optional *string `json:"opt,omitempty"`
+		Sub      *Inner  `json:"sub,omitempty"`
+	}
+
+	t.Run("flat struct to map", func(t *testing.T) {
+		s := Sample{ID: 42, Name: "alice"}
+		got, err := output.ToGeneric(s)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		m, ok := got.(map[string]any)
+		if !ok {
+			t.Fatalf("expected map[string]any, got %T", got)
+		}
+		if m["id"] != 42 || m["name"] != "alice" {
+			t.Errorf("unexpected map contents: %v", m)
+		}
+		if _, exists := m["Hidden"]; exists {
+			t.Error("json:\"-\" field should be excluded")
+		}
+		if _, exists := m["opt"]; exists {
+			t.Error("nil omitempty pointer should be excluded")
+		}
+	})
+
+	t.Run("slice of structs to []any", func(t *testing.T) {
+		items := []Sample{{ID: 1, Name: "a"}, {ID: 2, Name: "b"}}
+		got, err := output.ToGeneric(items)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		arr, ok := got.([]any)
+		if !ok {
+			t.Fatalf("expected []any, got %T", got)
+		}
+		if len(arr) != 2 {
+			t.Fatalf("expected 2 elements, got %d", len(arr))
+		}
+		m := arr[0].(map[string]any)
+		if m["id"] != 1 {
+			t.Errorf("expected id=1, got %v", m["id"])
+		}
+	})
+
+	t.Run("non-nil pointer field included", func(t *testing.T) {
+		str := "present"
+		s := Sample{ID: 1, Optional: &str, Sub: &Inner{Value: "x"}}
+		got, err := output.ToGeneric(s)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		m := got.(map[string]any)
+		if m["opt"] != "present" {
+			t.Errorf("expected opt=present, got %v", m["opt"])
+		}
+		sub, ok := m["sub"].(map[string]any)
+		if !ok || sub["value"] != "x" {
+			t.Errorf("expected nested sub.value=x, got %v", m["sub"])
+		}
+	})
+
+	t.Run("nil pointer to struct returns nil", func(t *testing.T) {
+		var p *Sample
+		got, err := output.ToGeneric(p)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != nil {
+			t.Errorf("expected nil, got %v", got)
+		}
+	})
+
+	t.Run("omitempty slice excluded when nil", func(t *testing.T) {
+		type WithSlice struct {
+			Items []string `json:"items,omitempty"`
+		}
+		got, err := output.ToGeneric(WithSlice{})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		m := got.(map[string]any)
+		if _, exists := m["items"]; exists {
+			t.Error("nil omitempty slice should be excluded")
+		}
+	})
+}

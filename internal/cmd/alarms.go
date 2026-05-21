@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -36,9 +37,11 @@ func newAlarmsCmd(state *appState) *cobra.Command {
 // newAlarmsListCmd implements "alarms list".
 func newAlarmsListCmd(state *appState) *cobra.Command {
 	var (
-		page     int
-		pageSize int
-		asJSON   bool
+		page        int
+		pageSize    int
+		asJSON      bool
+		fieldsFlag  string
+		summaryFlag bool
 	)
 
 	cmd := &cobra.Command{
@@ -51,6 +54,16 @@ func newAlarmsListCmd(state *appState) *cobra.Command {
 			}
 
 			if asJSON {
+				if summaryFlag {
+					return output.JSONSummary(cmd.OutOrStdout(), len(alarms), nil, len(alarms) == pageSize)
+				}
+				if fieldsFlag != "" {
+					generic, err := output.ToGeneric(alarms)
+					if err != nil {
+						return fmt.Errorf("serializing results: %w", err)
+					}
+					return output.JSON(cmd.OutOrStdout(), output.FilterFields(generic, strings.Split(fieldsFlag, ",")))
+				}
 				return output.JSON(cmd.OutOrStdout(), alarms)
 			}
 
@@ -70,6 +83,8 @@ func newAlarmsListCmd(state *appState) *cobra.Command {
 	cmd.Flags().IntVar(&page, "page", 1, "Page number")
 	cmd.Flags().IntVar(&pageSize, "page-size", 50, "Number of results per page")
 	cmd.Flags().BoolVar(&asJSON, "json", false, "Output raw JSON")
+	cmd.Flags().StringVar(&fieldsFlag, "fields", "", "Comma-separated top-level JSON keys to include (e.g. id,name)")
+	cmd.Flags().BoolVar(&summaryFlag, "summary", false, "Return aggregate statistics instead of full results")
 	return cmd
 }
 
