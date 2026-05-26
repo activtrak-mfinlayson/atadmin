@@ -146,7 +146,7 @@ func newConsumersCreateCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("creating consumers: %w", err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Created %d consumers\n", len(records))
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Created %d consumers\n", len(records))
 			return nil
 		},
 	}
@@ -177,7 +177,7 @@ func newConsumersUpdateCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("updating consumers: %w", err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Updated %d consumers\n", len(records))
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Updated %d consumers\n", len(records))
 			return nil
 		},
 	}
@@ -208,9 +208,9 @@ func newConsumersDeleteCmd(state *appState) *cobra.Command {
 			}
 
 			if tty.IsTerminal() {
-				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Deleted %d consumers\n", len(ids))
+				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Deleted %d consumers\n", len(ids))
 			} else {
-				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "deleted")
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "deleted")
 			}
 			return nil
 		},
@@ -242,7 +242,7 @@ func newConsumersDeleteBulkCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("bulk deleting consumers: %w", err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Deleted %d consumers\n", len(records))
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Deleted %d consumers\n", len(records))
 			return nil
 		},
 	}
@@ -288,7 +288,7 @@ func newConsumersRoleSetCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("setting role for consumer %d: %w", id, err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Set role for consumer %d to %q\n", id, role)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Set role for consumer %d to %q\n", id, role)
 			return nil
 		},
 	}
@@ -345,7 +345,7 @@ func newConsumersPasswordSetCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("setting password for consumer %d: %w", id, err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Password updated for consumer %d\n", id)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Password updated for consumer %d\n", id)
 			return nil
 		},
 	}
@@ -407,7 +407,7 @@ func newConsumersSSOSetCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("setting SSO for consumer %d: %w", consumerID, err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Set SSO=%v for consumer %d\n", useSSO, consumerID)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Set SSO=%v for consumer %d\n", useSSO, consumerID)
 			return nil
 		},
 	}
@@ -459,7 +459,7 @@ func newConsumersGroupsAddCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("adding viewable groups for consumer %d: %w", id, err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Added %d viewable group(s) for consumer %d\n", len(groupIDs), id)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Added %d viewable group(s) for consumer %d\n", len(groupIDs), id)
 			return nil
 		},
 	}
@@ -505,7 +505,7 @@ func newConsumersChromeUsersImportCmd(state *appState) *cobra.Command {
 				return fmt.Errorf("importing Chrome users: %w", err)
 			}
 
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Imported %d Chrome user records\n", len(records))
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Imported %d Chrome user records\n", len(records))
 			return nil
 		},
 	}

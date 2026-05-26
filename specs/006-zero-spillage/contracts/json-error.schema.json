@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "atadmin/json-error",
+  "title": "JSON Error Response",
+  "description": "Emitted to stdout (exit code 1) when any atadmin command fails while --json or --format=json is active.",
+  "type": "object",
+  "required": ["error"],
+  "additionalProperties": false,
+  "properties": {
+    "error": {
+      "type": "string",
+      "description": "Human-readable error message. Never empty."
+    },
+    "suggestion": {
+      "type": "string",
+      "description": "Actionable next step an agent or user can take to self-correct. Omitted when no suggestion applies."
+    }
+  },
+  "examples": [
+    {
+      "error": "loading profile \"default\": token not configured",
+      "suggestion": "Run 'atadmin auth login' to configure credentials."
+    },
+    {
+      "error": "users get: 404 Not Found"
+    },
+    {
+      "error": "users list: 401 Unauthorized",
+      "suggestion": "Run 'atadmin auth login' to authenticate."
+    }
+  ]
+}

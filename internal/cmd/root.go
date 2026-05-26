@@ -9,6 +9,7 @@ import (
 
 	"github.com/activtrak-mfinlayson/atadmin/internal/api"
 	"github.com/activtrak-mfinlayson/atadmin/internal/config"
+	"github.com/activtrak-mfinlayson/atadmin/internal/output"
 )
 
 // Version is the current atadmin release version.
@@ -108,8 +109,13 @@ Use it to manage users, groups, devices, and settings for your ActivTrak account
 // Execute runs atadmin and writes errors to the command's error output.
 func Execute() error {
 	root := NewRootCmd()
+	asJSON := output.DetectJSONMode(os.Args[1:])
 	if err := root.Execute(); err != nil {
-		_, _ = fmt.Fprintf(root.ErrOrStderr(), "Error: %s\nRun 'atadmin --help' for usage.\n", err)
+		out := root.ErrOrStderr()
+		if asJSON {
+			out = root.OutOrStdout()
+		}
+		output.WriteError(out, err, output.SuggestionFor(err), asJSON)
 		return err
 	}
 	return nil
