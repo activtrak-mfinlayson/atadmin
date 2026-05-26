@@ -2,12 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/activtrak-mfinlayson/atadmin/internal/output"
+	"github.com/activtrak-mfinlayson/atadmin/internal/stdin"
 	"github.com/activtrak-mfinlayson/atadmin/internal/tty"
 )
 
@@ -137,19 +139,40 @@ func newAlarmsDetailsCmd(state *appState) *cobra.Command {
 
 // newAlarmsCreateCmd implements "alarms create --file <path>".
 func newAlarmsCreateCmd(state *appState) *cobra.Command {
-	var filePath string
+	var (
+		filePath  string
+		fromStdin bool
+	)
 
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create an alarm from a JSON file",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if filePath == "" {
-				return fmt.Errorf("--file is required")
+			if filePath != "" && fromStdin {
+				return fmt.Errorf("--from-stdin: --file and --from-stdin are mutually exclusive")
 			}
-			body, err := readJSONObjectFile(filePath)
-			if err != nil {
-				return fmt.Errorf("reading file %q: %w", filePath, err)
+
+			var body map[string]any
+			var err error
+
+			if fromStdin {
+				if err := stdin.EnsurePiped(); err != nil {
+					return err
+				}
+				body, err = stdin.ReadJSON[map[string]any](os.Stdin)
+				if err != nil {
+					return err
+				}
+			} else {
+				if filePath == "" {
+					return fmt.Errorf("--file is required")
+				}
+				body, err = readJSONObjectFile(filePath)
+				if err != nil {
+					return fmt.Errorf("reading file %q: %w", filePath, err)
+				}
 			}
+
 			if err := state.client.SaveAlarms(cmd.Context(), body); err != nil {
 				return fmt.Errorf("creating alarm: %w", err)
 			}
@@ -157,25 +180,47 @@ func newAlarmsCreateCmd(state *appState) *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON file (required)")
+	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON file")
+	cmd.Flags().BoolVar(&fromStdin, "from-stdin", false, "Read JSON object from stdin instead of --file")
 	return cmd
 }
 
 // newAlarmsUpdateCmd implements "alarms update --file <path>".
 func newAlarmsUpdateCmd(state *appState) *cobra.Command {
-	var filePath string
+	var (
+		filePath  string
+		fromStdin bool
+	)
 
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Update an alarm from a JSON file",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if filePath == "" {
-				return fmt.Errorf("--file is required")
+			if filePath != "" && fromStdin {
+				return fmt.Errorf("--from-stdin: --file and --from-stdin are mutually exclusive")
 			}
-			body, err := readJSONObjectFile(filePath)
-			if err != nil {
-				return fmt.Errorf("reading file %q: %w", filePath, err)
+
+			var body map[string]any
+			var err error
+
+			if fromStdin {
+				if err := stdin.EnsurePiped(); err != nil {
+					return err
+				}
+				body, err = stdin.ReadJSON[map[string]any](os.Stdin)
+				if err != nil {
+					return err
+				}
+			} else {
+				if filePath == "" {
+					return fmt.Errorf("--file is required")
+				}
+				body, err = readJSONObjectFile(filePath)
+				if err != nil {
+					return fmt.Errorf("reading file %q: %w", filePath, err)
+				}
 			}
+
 			if err := state.client.SaveAlarm(cmd.Context(), body); err != nil {
 				return fmt.Errorf("updating alarm: %w", err)
 			}
@@ -183,7 +228,8 @@ func newAlarmsUpdateCmd(state *appState) *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON file (required)")
+	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON file")
+	cmd.Flags().BoolVar(&fromStdin, "from-stdin", false, "Read JSON object from stdin instead of --file")
 	return cmd
 }
 

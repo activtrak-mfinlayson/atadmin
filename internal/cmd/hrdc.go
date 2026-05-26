@@ -2,11 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/activtrak-mfinlayson/atadmin/internal/bulk"
+	"github.com/activtrak-mfinlayson/atadmin/internal/stdin"
 	"github.com/activtrak-mfinlayson/atadmin/internal/tty"
 )
 
@@ -52,19 +54,38 @@ func newHRDCPingCmd(state *appState) *cobra.Command {
 
 // newHRDCImportCmd implements "hrdc import --file <path>".
 func newHRDCImportCmd(state *appState) *cobra.Command {
-	var filePath string
+	var (
+		filePath  string
+		fromStdin bool
+	)
 
 	cmd := &cobra.Command{
 		Use:   "import",
 		Short: "Import HRDC records from a JSON or CSV file",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if filePath == "" {
-				return fmt.Errorf("--file is required")
+			if filePath != "" && fromStdin {
+				return fmt.Errorf("--from-stdin: --file and --from-stdin are mutually exclusive")
 			}
 
-			records, err := bulk.ParseFile(filePath)
-			if err != nil {
-				return fmt.Errorf("reading file %q: %w", filePath, err)
+			var records []map[string]any
+			var err error
+
+			if fromStdin {
+				if err := stdin.EnsurePiped(); err != nil {
+					return err
+				}
+				records, err = stdin.ReadRecords(os.Stdin)
+				if err != nil {
+					return err
+				}
+			} else {
+				if filePath == "" {
+					return fmt.Errorf("--file is required")
+				}
+				records, err = bulk.ParseFile(filePath)
+				if err != nil {
+					return fmt.Errorf("reading file %q: %w", filePath, err)
+				}
 			}
 
 			if err := state.client.HRDCBulkImport(cmd.Context(), records); err != nil {
@@ -78,6 +99,7 @@ func newHRDCImportCmd(state *appState) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON or CSV file (required)")
+	cmd.Flags().StringVar(&filePath, "file", "", "Path to JSON or CSV file")
+	cmd.Flags().BoolVar(&fromStdin, "from-stdin", false, "Read JSON array from stdin instead of --file")
 	return cmd
 }
