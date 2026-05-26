@@ -79,6 +79,8 @@ and save it to your configuration file.`,
 				Version,
 				false,
 				stderr,
+				false,
+				os.Stdout,
 			)
 			if err != nil {
 				return fmt.Errorf("creating validation client: %w", err)

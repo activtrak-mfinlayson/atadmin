@@ -31,6 +31,7 @@ func NewRootCmd() *cobra.Command {
 		baseURLFlag string
 		verboseFlag bool
 		versionFlag bool
+		dryRunFlag  bool
 	)
 
 	var state appState
@@ -59,7 +60,7 @@ Use it to manage users, groups, devices, and settings for your ActivTrak account
 				cfg.Format = formatFlag
 			}
 
-			client, err := api.NewClient(cfg.BaseURL, cfg.Token, Version, verboseFlag, os.Stderr)
+			client, err := api.NewClient(cfg.BaseURL, cfg.Token, Version, verboseFlag, os.Stderr, dryRunFlag, cmd.OutOrStdout())
 			if err != nil {
 				return fmt.Errorf("creating API client: %w", err)
 			}
@@ -81,6 +82,7 @@ Use it to manage users, groups, devices, and settings for your ActivTrak account
 	root.Flags().BoolVar(&versionFlag, "version", false, "Show version information")
 	root.PersistentFlags().StringVar(&profileFlag, "profile", "default", "Config profile to use (env: ATADMIN_PROFILE)")
 	root.PersistentFlags().BoolVar(&verboseFlag, "verbose", false, "Print HTTP request/response details to stderr")
+	root.PersistentFlags().BoolVar(&dryRunFlag, "dry-run", false, "Preview the action without executing it (prints JSON to stdout)")
 	root.PersistentFlags().StringVarP(&formatFlag, "format", "f", "", "Output format: table or json (env: ATADMIN_FORMAT)")
 	root.PersistentFlags().StringVar(&tokenFlag, "token", "", "API bearer token (env: ATADMIN_TOKEN)")
 	root.PersistentFlags().StringVar(&baseURLFlag, "base-url", "", "API base URL (env: ATADMIN_BASE_URL)")
